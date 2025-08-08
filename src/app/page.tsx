@@ -1,103 +1,341 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import Link from "next/link";
+import { motion } from "framer-motion";
+import { Button } from "../components/Button";
+import { FeatureCard } from "../components/FeatureCard";
+import { ClipboardList, Calendar, MessageCircle, CheckCircle2, Users, Star, ArrowRight, Play } from "lucide-react";
+
+const companies = [
+  { name: 'Acme Corp' },
+  { name: 'Globex' },
+  { name: 'Initech' },
+  { name: 'Umbrella' },
+  { name: 'Stark Industries' },
+];
+
+const features = [
+  {
+    icon: <ClipboardList size={36} />, title: 'Kanban Boards',
+    description: 'Organize your work visually with drag-and-drop boards.'
+  },
+  {
+    icon: <Calendar size={36} />, title: 'Smart Calendar',
+    description: 'Schedule, sync, and never miss a deadline again.'
+  },
+  {
+    icon: <MessageCircle size={36} />, title: 'Team Chat',
+    description: 'Collaborate in real time with built-in chat and comments.'
+  },
+  {
+    icon: <CheckCircle2 size={36} />, title: 'Notes & Docs',
+    description: 'Take notes, write docs, and keep everything in one place.'
+  },
+];
+
+const steps = [
+  { icon: <Users size={28} />, title: 'Sign Up', desc: 'Create your workspace and invite your team.' },
+  { icon: <ClipboardList size={28} />, title: 'Organize', desc: 'Set up boards, tasks, and notes.' },
+  { icon: <Calendar size={28} />, title: 'Plan', desc: 'Schedule events and deadlines.' },
+  { icon: <MessageCircle size={28} />, title: 'Collaborate', desc: 'Chat, comment, and get things done together.' },
+];
+
+const testimonials = [
+  {
+    name: 'Sarah Johnson',
+    role: 'Product Manager',
+    content: 'WorkSync transformed how our team collaborates. The real-time updates and intuitive interface make project management effortless.',
+    avatar: 'SJ',
+  },
+  {
+    name: 'Mike Chen',
+    role: 'Design Lead',
+    content: 'The drag-and-drop functionality and beautiful UI make task management actually enjoyable. Highly recommended!',
+    avatar: 'MC',
+  },
+  {
+    name: 'Emily Davis',
+    role: 'Developer',
+    content: 'Perfect for our agile workflow. The integration between tasks, notes, and calendar is seamless.',
+    avatar: 'ED',
+  },
+];
+
+export default function LandingPage() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <main className="min-h-screen flex flex-col bg-gradient-to-br from-[#0FC2C0] via-[#0CABA8] to-[#023535] relative overflow-x-hidden">
+      {/* Animated Blobs */}
+      <motion.div
+        className="absolute top-[-100px] left-[-100px] w-[400px] h-[400px] rounded-full bg-[#0FC2C0] opacity-30 blur-3xl z-0"
+        animate={{ x: [0, 60, 0], y: [0, 40, 0] }}
+        transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
+      />
+      <motion.div
+        className="absolute bottom-[-120px] right-[-120px] w-[500px] h-[500px] rounded-full bg-[#008F8C] opacity-30 blur-3xl z-0"
+        animate={{ x: [0, -60, 0], y: [0, -40, 0] }}
+        transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
+      />
+      {/* Hero Section */}
+      <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-12">
+          <div className="flex-1 text-center md:text-left">
+            <motion.h1
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
+              className="text-5xl md:text-7xl font-bold bg-gradient-to-r from-[#0FC2C0] to-[#015958] bg-clip-text text-transparent mb-6 drop-shadow"
+            >
+                WorkSync: All-in-One Productivity
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              className="text-xl md:text-2xl text-[#015958] mb-8 max-w-3xl mx-auto md:mx-0"
+            >
+              Plan, collaborate, and achieve more with real-time boards, notes, calendar, and smart AI—all in one beautiful workspace.
+            </motion.p>
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+              className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start items-center mb-12"
+            >
+              <Link href="/register">
+                <Button className="bg-gradient-to-r from-[#0FC2C0] to-[#015958] text-white px-8 py-4 rounded-xl text-lg font-semibold hover:from-[#0CABA8] hover:to-[#008F8C] transition-colors flex items-center gap-2 shadow-lg">
+                  Get Started
+                  <ArrowRight className="h-5 w-5" />
+                </Button>
+              </Link>
+              <Button className="flex items-center gap-2 px-8 py-4 border-2 border-[#0FC2C0] text-[#0FC2C0] rounded-xl text-lg font-semibold hover:bg-[#0FC2C0]/10 transition-colors shadow bg-transparent">
+                <Play className="h-5 w-5" />
+                Watch Demo
+              </Button>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.8, delay: 0.6 }}
+              className="flex items-center gap-1 text-[#015958]"
+            >
+              {[...Array(5)].map((_, i) => (
+                <Star key={i} className="h-5 w-5 fill-[#0FC2C0] text-[#0FC2C0]" />
+              ))}
+              <span className="ml-2 text-[#015958]">4.9/5 from 2,000+ reviews</span>
+            </motion.div>
+          </div>
+          {/* UI Mockup Illustration - Pure CSS/JSX, no SVG */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8, delay: 0.3 }}
+            className="flex-1 flex justify-center"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            <div className="relative w-[350px] h-[220px] bg-white/90 rounded-2xl shadow-2xl border-2 border-[#0FC2C0]/30 overflow-hidden flex flex-col">
+              {/* Window controls */}
+              <div className="flex items-center gap-2 px-4 py-2 bg-[#0FC2C0]/10 border-b border-[#0FC2C0]/20">
+                <div className="w-3 h-3 rounded-full bg-[#0FC2C0]" />
+                <div className="w-3 h-3 rounded-full bg-[#0CABA8]" />
+                <div className="w-3 h-3 rounded-full bg-[#008F8C]" />
+              </div>
+              {/* Dashboard content */}
+              <div className="flex-1 flex flex-col justify-center items-center p-6 gap-3">
+                <div className="w-32 h-4 bg-gradient-to-r from-[#0FC2C0] to-[#0CABA8] rounded mb-2" />
+                <div className="w-48 h-4 bg-gradient-to-r from-[#0CABA8] to-[#008F8C] rounded mb-4" />
+                <div className="flex gap-2">
+                  <div className="w-16 h-16 bg-[#0FC2C0]/30 rounded-lg flex items-center justify-center">
+                    <ClipboardList className="text-[#0FC2C0]" size={32} />
+                  </div>
+                  <div className="w-16 h-16 bg-[#0CABA8]/30 rounded-lg flex items-center justify-center">
+                    <Calendar className="text-[#0CABA8]" size={32} />
+                  </div>
+                  <div className="w-16 h-16 bg-[#008F8C]/30 rounded-lg flex items-center justify-center">
+                    <MessageCircle className="text-[#008F8C]" size={32} />
+                  </div>
+                </div>
+              </div>
+              {/* Animated accent blob */}
+              <motion.div
+                className="absolute -bottom-8 -right-8 w-24 h-24 rounded-full bg-[#0FC2C0] opacity-30 blur-2xl z-0"
+                animate={{ x: [0, 10, 0], y: [0, -10, 0] }}
+                transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+              />
+            </div>
+          </motion.div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      </section>
+      {/* Trusted By Section */}
+      <section className="py-6">
+        <div className="max-w-5xl mx-auto flex flex-col items-center">
+          <span className="text-[#015958] font-medium mb-2">Trusted by teams at</span>
+          <div className="flex flex-wrap gap-8 justify-center items-center opacity-80">
+            {companies.map((c, i) => (
+              <span key={i} className="text-[#015958] text-lg font-semibold tracking-wide opacity-80">{c.name}</span>
+            ))}
+          </div>
+        </div>
+      </section>
+      {/* Features Section */}
+      <section className="py-20 bg-white/60 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-4">
+          <h2 className="text-2xl font-bold text-[#015958] mb-8 text-center">Why WorkSync?</h2>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {features.map((f, i) => (
+              <div key={i} className="rounded-xl bg-[#015958] text-white shadow p-6 flex flex-col items-center">
+                <div className="mb-3 text-[#0FC2C0]">{f.icon}</div>
+                <h3 className="mb-1 text-lg font-semibold">{f.title}</h3>
+                <p className="text-sm text-center">{f.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+      {/* How It Works Section */}
+      <section className="py-20">
+        <div className="max-w-5xl mx-auto px-4">
+          <h2 className="text-2xl font-bold text-[#015958] mb-8 text-center">How It Works</h2>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            {steps.map((step, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: i * 0.1 }}
+                viewport={{ once: true }}
+                className="flex flex-col items-center text-center bg-white/80 rounded-xl shadow p-6 border border-[#0FC2C0]"
+              >
+                <div className="mb-3 text-[#0FC2C0]">{step.icon}</div>
+                <h3 className="mb-1 text-lg font-semibold text-[#015958]">{step.title}</h3>
+                <p className="text-sm text-[#015958]">{step.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+      {/* Integrations Section */}
+      <section className="py-20 bg-[#0CABA8]/10">
+        <div className="max-w-5xl mx-auto px-4">
+          <h2 className="text-2xl font-bold text-[#015958] mb-8 text-center">Seamless Integrations</h2>
+          <div className="flex flex-wrap justify-center gap-8">
+            {['Google Drive', 'Slack', 'GitHub', 'Notion', 'Trello', 'Asana'].map((name, i) => (
+              <motion.div
+                key={name}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+                className="bg-white rounded-lg shadow px-6 py-4 text-[#015958] font-semibold text-lg border border-[#0FC2C0]/20 min-w-[120px] text-center"
+              >
+                {name}
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+      {/* Use Cases Section */}
+      <section className="py-20">
+        <div className="max-w-7xl mx-auto px-4">
+          <h2 className="text-2xl font-bold text-[#015958] mb-8 text-center">Perfect For...</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              { title: 'Teams', desc: 'Collaborate, assign tasks, and track progress together.' },
+              { title: 'Freelancers', desc: 'Manage clients, projects, and deadlines in one place.' },
+              { title: 'Students', desc: 'Organize study notes, group projects, and schedules.' },
+            ].map((uc, i) => (
+              <motion.div
+                key={uc.title}
+                initial={{ opacity: 0, scale: 0.95 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                transition={{ delay: i * 0.1 }}
+                className="bg-[#0FC2C0]/10 border border-[#0FC2C0]/20 rounded-xl p-8 shadow flex flex-col items-center"
+              >
+                <h3 className="text-xl font-semibold text-[#015958] mb-2">{uc.title}</h3>
+                <p className="text-[#015958] text-center">{uc.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+      {/* Live Demo Section (placeholder) */}
+      <section className="py-20 bg-[#015958]/90">
+        <div className="max-w-4xl mx-auto px-4 text-center">
+          <h2 className="text-2xl font-bold text-white mb-4">Try the Live Demo</h2>
+          <p className="text-[#0FC2C0] mb-8">Experience WorkSync in action! (Coming soon)</p>
+          <div className="w-full h-64 bg-[#015958] rounded-xl flex items-center justify-center text-[#0FC2C0] text-2xl font-bold border-4 border-[#0FC2C0]/30 animate-pulse">
+            Live Demo Placeholder
+          </div>
+        </div>
+      </section>
+      {/* FAQ Section */}
+      <section className="py-20">
+        <div className="max-w-3xl mx-auto px-4">
+          <h2 className="text-2xl font-bold text-[#015958] mb-8 text-center">Frequently Asked Questions</h2>
+          <div className="space-y-4">
+            {[
+              { q: 'Is WorkSync really free?', a: 'Yes! All features are free to use for everyone.' },
+              { q: 'Can I use WorkSync with my team?', a: 'Absolutely. Invite as many teammates as you like.' },
+              { q: 'Will there be a mobile app?', a: 'Yes, a mobile app is in development.' },
+              { q: 'How do I import data from other tools?', a: 'We support integrations and easy import from popular tools like Trello, Asana, and Notion.' },
+            ].map((faq, i) => (
+              <motion.details
+                key={faq.q}
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+                className="bg-[#0FC2C0]/10 border border-[#0FC2C0]/20 rounded-lg p-4"
+              >
+                <summary className="font-semibold text-[#015958] cursor-pointer">{faq.q}</summary>
+                <p className="mt-2 text-[#015958]">{faq.a}</p>
+              </motion.details>
+            ))}
+          </div>
+        </div>
+      </section>
+      {/* Newsletter Signup Section */}
+      <section className="py-20 bg-[#0FC2C0]/10">
+        <div className="max-w-xl mx-auto px-4 text-center">
+          <h2 className="text-2xl font-bold text-[#015958] mb-4">Stay in the Loop</h2>
+          <p className="text-[#015958] mb-6">Get updates on new features, tips, and the upcoming live demo.</p>
+          <form className="flex flex-col sm:flex-row gap-4 justify-center">
+            <input type="email" placeholder="Your email" className="px-6 py-3 rounded-lg border border-[#0FC2C0]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-white flex-1" />
+            <Button type="submit" className="bg-gradient-to-r from-[#0FC2C0] to-[#015958] hover:from-[#0CABA8] hover:to-[#008F8C] text-white px-8 py-3 rounded-lg font-semibold shadow transition">Subscribe</Button>
+          </form>
+        </div>
+      </section>
+      {/* Testimonials Section */}
+      <section className="py-20 bg-white/60 backdrop-blur-md">
+        <div className="max-w-5xl mx-auto px-4">
+          <h2 className="text-2xl font-bold text-[#015958] mb-8 text-center">What Our Users Say</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {testimonials.map((t, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: i * 0.1 }}
+                viewport={{ once: true }}
+                className="bg-white rounded-xl shadow p-6 flex flex-col items-center border border-[#0FC2C0]"
+              >
+                <div className="w-12 h-12 rounded-full bg-[#0FC2C0] flex items-center justify-center text-white font-bold text-xl mb-3">
+                  {t.avatar}
+                </div>
+                <p className="text-[#015958] mb-2">“{t.content}”</p>
+                <span className="text-[#015958] font-semibold">{t.name}</span>
+                <span className="text-[#015958] text-sm">{t.role}</span>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+      {/* Final CTA */}
+      <section className="py-20">
+        <div className="max-w-2xl mx-auto text-center">
+          <h2 className="text-3xl font-bold text-[#015958] mb-4">Ready to get started?</h2>
+          <p className="text-lg text-[#015958] mb-8">Join thousands of teams and individuals using WorkSync to get more done, together.</p>
+          <Link href="/register">
+            <Button className="text-lg px-8 py-4 shadow-lg bg-gradient-to-r from-[#0FC2C0] to-[#015958] hover:from-[#0CABA8] hover:to-[#008F8C] text-white">Get Started Free</Button>
+          </Link>
+        </div>
+      </section>
+    </main>
   );
 }
