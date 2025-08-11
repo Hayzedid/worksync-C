@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { Button } from '../../../components/Button';
 import { Settings, User, Bell, Building2 } from 'lucide-react';
 
@@ -38,7 +39,7 @@ export default function SettingsPage() {
                 <label className="block text-[#015958] font-semibold mb-1">Email</label>
                 <input className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" value="demo@worksync.com" readOnly />
               </div>
-              <Button className="bg-[#0FC2C0] text-white px-6 py-3 rounded-lg font-semibold hover:bg-[#0CABA8]">Change Password</Button>
+              <Link href="/forgot-password" className="bg-[#0FC2C0] text-white px-6 py-3 rounded-lg font-semibold hover:bg-[#0CABA8] text-center">Change Password</Link>
             </div>
           )}
           {activeTab === "Notifications" && (

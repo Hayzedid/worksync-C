@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { api } from "../../../api";
 import { Eye, EyeOff } from "lucide-react";
 
@@ -16,15 +17,8 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      // Mock login logic for demo
-      if (form.email === "demo@worksync.com" && form.password === "password123") {
-        router.push("/dashboard");
-        return;
-      } else {
-        throw new Error("Invalid email or password");
-      }
-      // await api.post("/auth/login", form);
-      // router.push("/dashboard");
+      await api.post("/auth/login", form);
+      router.replace("/dashboard");
     } catch (err: any) {
       setError(err.message || "Login failed");
     } finally {
@@ -58,7 +52,7 @@ export default function LoginPage() {
         {error && <div className="text-red-500 mb-2">{error}</div>}
         <button className="bg-[#0FC2C0] text-white px-4 py-2 rounded w-full transition-colors duration-200 hover:bg-[#0CABA8]" disabled={loading}>{loading ? "Logging in..." : "Login"}</button>
         <div className="mt-4 text-center">
-          <a href="/register" className="text-[#0CABA8] hover:underline">Don't have an account? Register</a>
+          <Link href="/register" className="text-[#0CABA8] hover:underline">Don't have an account? Register</Link>
         </div>
       </form>
     </div>

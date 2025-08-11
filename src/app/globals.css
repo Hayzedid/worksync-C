@@ -10,6 +10,17 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  /* Tailwind v4 custom color tokens used across the app */
+  --color-ws-primary: #2563eb;   /* Blue */
+  --color-ws-secondary: #14b8a6; /* Teal */
+  --color-ws-accent: #facc15;    /* Yellow */
+  --color-ws-dark: #1e293b;      /* Deep Navy */
+  --color-ws-light: #f8fafc;     /* Light Gray */
+  /* Teal palette tokens used in some pages */
+  --color-teal-light: #0FC2C0;
+  --color-teal-medium: #0CABA8;
+  --color-teal-deep: #008F8C;
+  --color-teal-deepest: #015958;
 }
 
 @media (prefers-color-scheme: dark) {

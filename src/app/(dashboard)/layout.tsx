@@ -3,6 +3,9 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+import { useAuth } from "../../hooks/useAuth";
+import { api } from "../../api";
 import { 
   LayoutDashboard, 
   CheckSquare, 
@@ -18,17 +21,20 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Building2
+  Building2,
+  FolderPlus,
+  BarChart2
 } from 'lucide-react';
-import { AuthProvider } from "../../hooks/useAuth";
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Workspace', href: '/workspace', icon: Building2 },
-  { name: 'Events', href: '/events', icon: Calendar },
+  { name: 'Projects', href: '/projects', icon: FolderPlus },
   { name: 'Tasks', href: '/tasks', icon: CheckSquare },
   { name: 'Notes', href: '/notes', icon: FileText },
+  { name: 'Events', href: '/events', icon: Calendar },
   { name: 'Calendar', href: '/calendar', icon: Calendar },
+  { name: 'Workspace', href: '/workspace', icon: Building2 },
+  { name: 'Analytics', href: '/analytics', icon: BarChart2 },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
@@ -42,6 +48,8 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
+  const auth = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const pathname = usePathname();
@@ -49,8 +57,21 @@ export default function DashboardLayout({
   const [selectedWorkspace, setSelectedWorkspace] = useState(workspaces[0]);
   const [switcherOpen, setSwitcherOpen] = useState(false);
 
+  // Redirect unauthenticated users
+  if (auth && !auth.loading && !auth.user) {
+    router.replace('/login');
+    return null;
+  }
+
+  async function handleLogout() {
+    try {
+      await api.post('/auth/logout');
+    } catch {}
+    auth?.refresh();
+    router.replace('/login');
+  }
+
   return (
-    <AuthProvider>
       <div className="min-h-screen bg-[#F6FFFE]">
         {/* Mobile sidebar */}
         <div className={`fixed inset-0 z-50 lg:hidden ${sidebarOpen ? 'block' : 'hidden'}`}>
@@ -186,9 +207,12 @@ export default function DashboardLayout({
                   <div className="h-8 w-8 rounded-full bg-[#0FC2C0] flex items-center justify-center">
                     <User className="h-5 w-5 text-white" />
                   </div>
-                  <span className="hidden lg:block">John Doe</span>
+                  <span className="hidden lg:block">{auth?.user?.name ?? 'Profile'}</span>
                 </button>
               </div>
+              <button onClick={handleLogout} className="-m-2.5 p-2.5 text-white" aria-label="Logout">
+                <LogOut className="h-5 w-5" />
+              </button>
             </div>
           </div>
 
@@ -200,6 +224,5 @@ export default function DashboardLayout({
           </main>
         </div>
       </div>
-    </AuthProvider>
   );
 } 

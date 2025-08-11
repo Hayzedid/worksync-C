@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { Users, Settings, Folder, Activity as ActivityIcon, UserPlus } from "lucide-react";
 
 const mockMembers = [
@@ -30,7 +31,7 @@ export default function WorkspacePage() {
             </li>
           ))}
         </ul>
-        <button className="mt-4 flex items-center gap-2 px-4 py-2 bg-[#0FC2C0] text-white rounded hover:bg-[#0CABA8] transition-colors"><UserPlus className="h-4 w-4" /> Invite Member</button>
+        <Link href="/workspace/invite" className="mt-4 flex items-center gap-2 px-4 py-2 bg-[#0FC2C0] text-white rounded hover:bg-[#0CABA8] transition-colors"><UserPlus className="h-4 w-4" /> Invite Member</Link>
       </div>
       {/* Workspace Settings */}
       <div className="bg-white rounded-xl shadow p-6 border border-[#0CABA8]/20 flex flex-col">
@@ -38,7 +39,7 @@ export default function WorkspacePage() {
         <div className="text-[#015958] mb-2">Name: <span className="font-semibold">Acme Corp</span></div>
         <div className="text-[#015958] mb-2">Members: {mockMembers.length}</div>
         <div className="text-[#015958] mb-2">Projects: {mockProjects.length}</div>
-        <button className="mt-4 px-4 py-2 bg-[#008F8C] text-white rounded hover:bg-[#0FC2C0] transition-colors">Edit Settings</button>
+        <Link href="/settings" className="mt-4 inline-block px-4 py-2 bg-[#008F8C] text-white rounded hover:bg-[#0FC2C0] transition-colors">Edit Settings</Link>
       </div>
       {/* Projects */}
       <div className="bg-white rounded-xl shadow p-6 border border-[#0CABA8]/20 flex flex-col">
@@ -51,7 +52,7 @@ export default function WorkspacePage() {
             </li>
           ))}
         </ul>
-        <button className="mt-4 px-4 py-2 bg-[#0FC2C0] text-white rounded hover:bg-[#0CABA8] transition-colors">New Project</button>
+        <Link href="/projects/new" className="mt-4 inline-block px-4 py-2 bg-[#0FC2C0] text-white rounded hover:bg-[#0CABA8] transition-colors">New Project</Link>
       </div>
       {/* Activity */}
       <div className="bg-white rounded-xl shadow p-6 border border-[#0CABA8]/20 flex flex-col">

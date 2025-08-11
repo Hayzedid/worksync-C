@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { User, Edit } from "lucide-react";
 
 export default function ProfilePage() {
@@ -20,7 +21,7 @@ export default function ProfilePage() {
             <div className="text-[#015958] text-sm">Tasks Completed</div>
           </div>
         </div>
-        <button className="flex items-center gap-2 px-6 py-2 bg-[#0FC2C0] text-white rounded hover:bg-[#0CABA8] transition-colors font-semibold"><Edit className="h-4 w-4" /> Edit Profile</button>
+        <Link href="/profile/edit" className="flex items-center gap-2 px-6 py-2 bg-[#0FC2C0] text-white rounded hover:bg-[#0CABA8] transition-colors font-semibold"><Edit className="h-4 w-4" /> Edit Profile</Link>
       </div>
     </div>
   );

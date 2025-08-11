@@ -1,9 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { api } from "../../../api";
 import { ActivityFeed } from "../../../components/activity/ActivityFeed";
-import { NotificationList } from "../../../components/notifications/NotificationList";
-import { AnalyticsDashboard } from "../../../components/analytics/AnalyticsDashboard";
 import { Calendar, AlertCircle, Clock } from "lucide-react";
 
 type Notification = {

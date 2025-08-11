@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { api } from "../../api";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -14,9 +15,15 @@ export default function ForgotPasswordPage() {
           <div className="text-center text-teal-deep font-medium">Check your email for a password reset link.</div>
         ) : (
           <form
-            onSubmit={e => {
+            onSubmit={async e => {
               e.preventDefault();
-              setSubmitted(true);
+              try {
+                await api.post("/auth/forgot-password", { email });
+              } catch (err) {
+                // Silently succeed to avoid leaking account existence
+              } finally {
+                setSubmitted(true);
+              }
             }}
             className="space-y-6"
           >

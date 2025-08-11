@@ -23,6 +23,14 @@
 # misc
 .DS_Store
 *.pem
+*.key
+*.crt
+*.cer
+*.cert
+*.csr
+*.der
+*.p12
+*.pfx
 
 # debug
 npm-debug.log*
@@ -30,8 +38,13 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*
 
 # vercel
 .vercel
@@ -39,3 +52,23 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# tooling configs that may contain tokens
+.npmrc
+.pnpmrc
+.yarnrc
+.yarnrc.yml
+.envrc
+
+# IDE/editor
+.idea/
+.vscode/
+
+# OS junk
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Lint/tool caches
+.eslintcache
+.stylelintcache

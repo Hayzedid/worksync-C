@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { api } from "../../../api";
 import { Eye, EyeOff } from "lucide-react";
 
@@ -51,10 +52,7 @@ export default function RegisterPage() {
       data.append("last_name", form.lastName);
       data.append("timezone", form.timezone);
       if (profilePicture) data.append("profile_picture", profilePicture);
-      await fetch("/api/auth/register", {
-        method: "POST",
-        body: data,
-      });
+      await api.post("/auth/register", data);
       router.push("/login");
     } catch (err: any) {
       setError(err.message || "Registration failed");
@@ -116,7 +114,7 @@ export default function RegisterPage() {
         {error && <div className="text-red-500 mb-2">{error}</div>}
         <button className="bg-[#008F8C] text-white px-4 py-2 rounded w-full transition-colors duration-200 hover:bg-[#0FC2C0]" disabled={loading}>{loading ? "Registering..." : "Register"}</button>
         <div className="mt-4 text-center">
-          <a href="/login" className="text-[#0CABA8] hover:underline">Already have an account? Login</a>
+          <Link href="/login" className="text-[#0CABA8] hover:underline">Already have an account? Login</Link>
         </div>
       </form>
     </div>
