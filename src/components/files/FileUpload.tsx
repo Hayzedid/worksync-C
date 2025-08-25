@@ -12,7 +12,9 @@ export function FileUpload({ onUpload }: { onUpload: (file: File) => void }) {
 
   return (
     <div className="border-2 border-dashed border-[#0CABA8] rounded p-6 flex flex-col items-center gap-4 bg-[#F6FFFE]">
+      <label htmlFor="file-upload-input" className="sr-only">Select file to upload</label>
       <input
+        id="file-upload-input"
         type="file"
         ref={inputRef}
         className="hidden"

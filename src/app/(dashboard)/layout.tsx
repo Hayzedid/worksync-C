@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useRouter } from 'next/navigation';
@@ -18,7 +18,6 @@ import {
   X,
   User,
   LogOut,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Building2,
@@ -32,16 +31,12 @@ const navigation = [
   { name: 'Tasks', href: '/tasks', icon: CheckSquare },
   { name: 'Notes', href: '/notes', icon: FileText },
   { name: 'Events', href: '/events', icon: Calendar },
-  { name: 'Calendar', href: '/calendar', icon: Calendar },
-  { name: 'Workspace', href: '/workspace', icon: Building2 },
+  { name: 'Workspace', href: '/workspaces', icon: LayoutDashboard },
   { name: 'Analytics', href: '/analytics', icon: BarChart2 },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
-const initialWorkspaces = [
-  { name: 'Acme Corp', logo: '' },
-  { name: 'Globex', logo: '' },
-];
+type Workspace = { id: number; name: string; logo?: string | null };
 
 export default function DashboardLayout({
   children,
@@ -53,13 +48,29 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const pathname = usePathname();
-  const [workspaces] = useState(initialWorkspaces);
-  const [selectedWorkspace, setSelectedWorkspace] = useState(workspaces[0]);
-  const [switcherOpen, setSwitcherOpen] = useState(false);
+  // Workspace selection moved to dedicated page
 
-  // Redirect unauthenticated users
-  if (auth && !auth.loading && !auth.user) {
-    router.replace('/login');
+  // Redirect unauthenticated users (side-effect, not during render)
+  // If there is a token but no user yet, attempt a single refresh instead of redirecting.
+  const [didAttemptRefresh, setDidAttemptRefresh] = useState(false);
+  useEffect(() => {
+    if (!auth) return;
+    if (auth.loading) return;
+    const token = typeof window !== 'undefined' ? sessionStorage.getItem('access_token') : null;
+    if (!auth.user) {
+      if (token && !didAttemptRefresh) {
+        setDidAttemptRefresh(true);
+        auth.refresh();
+      } else if (!token) {
+        router.replace('/login');
+      }
+    }
+  }, [auth, auth?.loading, auth?.user, router, didAttemptRefresh]);
+
+  // Workspace create/list handled on /workspaces page
+
+  // Optionally block rendering until auth state known to avoid flicker
+  if (!auth || auth.loading) {
     return null;
   }
 
@@ -146,33 +157,9 @@ export default function DashboardLayout({
 
         {/* Main content */}
         <div className="lg:pl-64">
-          {/* Top bar */}
+          {/* Top bar (removed dummy workspace switcher) */}
           <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-[#0CABA8]/40 bg-[#0FC2C0] px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
-            {/* Workspace Switcher */}
-            <div className="relative">
-              <button
-                className="flex items-center gap-2 px-3 py-2 rounded bg-[#0CABA8] text-white font-semibold hover:bg-[#008F8C] focus:outline-none"
-                onClick={() => setSwitcherOpen((v) => !v)}
-              >
-                <span>{selectedWorkspace.logo ? <img src={selectedWorkspace.logo} alt={selectedWorkspace.name} className="w-6 h-6 rounded-full object-cover" /> : <Building2 className="h-5 w-5" />}</span>
-                <span>{selectedWorkspace.name}</span>
-                <ChevronDown className="h-4 w-4" />
-              </button>
-              {switcherOpen && (
-                <div className="absolute left-0 mt-2 w-48 bg-white rounded shadow-lg border border-[#0CABA8]/20 z-50">
-                  {workspaces.map((ws, i) => (
-                    <button
-                      key={i}
-                      className="w-full flex items-center gap-2 px-4 py-2 text-[#015958] hover:bg-[#F6FFFE]"
-                      onClick={() => { setSelectedWorkspace(ws); setSwitcherOpen(false); }}
-                    >
-                      {ws.logo ? <img src={ws.logo} alt={ws.name} className="w-5 h-5 rounded-full object-cover" /> : <Building2 className="h-4 w-4" />}
-                      <span>{ws.name}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            {/* Removed workspace switcher; selection happens from sidebar "Workspace" */}
 
             <button
               type="button"
@@ -197,20 +184,19 @@ export default function DashboardLayout({
             {/* Right side */}
             <div className="flex items-center gap-x-4 lg:gap-x-6">
               {/* Notifications */}
-              <button className="-m-2.5 p-2.5 text-[#008F8C] hover:text-[#0FC2C0]">
+              <button className="-m-2.5 p-2.5 text-white/90 hover:text-white">
                 <Bell className="h-6 w-6" />
               </button>
 
               {/* Profile dropdown */}
               <div className="relative">
-                <button className="flex items-center gap-x-3 text-sm font-medium text-white">
+                <button title="Profile" className="flex items-center gap-x-3 text-sm font-medium text-white">
                   <div className="h-8 w-8 rounded-full bg-[#0FC2C0] flex items-center justify-center">
                     <User className="h-5 w-5 text-white" />
                   </div>
-                  <span className="hidden lg:block">{auth?.user?.name ?? 'Profile'}</span>
                 </button>
               </div>
-              <button onClick={handleLogout} className="-m-2.5 p-2.5 text-white" aria-label="Logout">
+              <button onClick={handleLogout} title="Logout" className="-m-2.5 p-2.5 text-white" aria-label="Logout">
                 <LogOut className="h-5 w-5" />
               </button>
             </div>

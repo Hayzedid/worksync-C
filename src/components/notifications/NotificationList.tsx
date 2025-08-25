@@ -25,7 +25,7 @@ export function NotificationList({ notifications, onMarkRead, onDelete }: Notifi
             <span className="flex-1 text-[#015958]">{n.message}</span>
             <span className="text-xs text-[#0CABA8]">{new Date(n.createdAt).toLocaleString()}</span>
             {!n.read && <button className="text-[#0FC2C0]" onClick={() => onMarkRead(n.id)}>Mark as read</button>}
-            <button className="text-[#008F8C]" onClick={() => onDelete(n.id)}><X className="h-4 w-4" /></button>
+            <button className="text-[#008F8C]" title="Delete notification" aria-label="Delete notification" onClick={() => onDelete(n.id)}><X className="h-4 w-4" /></button>
           </li>
         ))}
       </ul>

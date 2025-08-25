@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "../../../../api";
 import { FolderPlus } from "lucide-react";
@@ -11,14 +11,53 @@ export default function NewProjectPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const wsParam = searchParams.get("ws");
+  const wsIdFromUrl = (() => {
+    if (!wsParam) return null;
+    const n = parseInt(wsParam, 10);
+    return Number.isFinite(n) ? n : null;
+  })();
+  const [currentWsId, setCurrentWsId] = useState<number | null>(null);
+  useEffect(() => {
+    if (wsIdFromUrl != null) {
+      setCurrentWsId(wsIdFromUrl);
+      if (typeof window !== "undefined") sessionStorage.setItem("current_workspace_id", String(wsIdFromUrl));
+      return;
+    }
+    if (typeof window !== "undefined") {
+      const stored = sessionStorage.getItem("current_workspace_id");
+      if (stored) {
+        const n = parseInt(stored, 10);
+        if (Number.isFinite(n)) setCurrentWsId(n);
+      }
+    }
+  }, [wsIdFromUrl]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      await api.post("/projects", { name, status });
-      router.push("/projects");
+      const body: any = { name, status: status.toLowerCase() };
+      const created = await api.post(
+        "/projects",
+        body,
+        currentWsId != null
+          ? { params: { ws: currentWsId } }
+          : undefined
+      );
+      const id = created?.id || created?.project?.id || created?.data?.id;
+      const wsId = created?.workspaceId || created?.workspace_id || created?.workspace?.id || currentWsId;
+      // Prefer redirect to workspace-scoped list so it appears immediately
+      if (wsId != null) {
+        router.push(`/workspace/projects?ws=${wsId}`);
+      } else if (id) {
+        router.push(`/projects/${id}`);
+      } else {
+        router.push("/workspace/projects");
+      }
     } catch (err: any) {
       setError(err.message || "Failed to create project");
     } finally {
@@ -44,6 +83,7 @@ export default function NewProjectPage() {
               <option>Active</option>
               <option>Planning</option>
               <option>Completed</option>
+              <option>Archived</option>
             </select>
           </div>
           {error && <div className="text-red-500">{error}</div>}

@@ -22,7 +22,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refresh = async () => {
     setLoading(true);
     try {
-      const data = await api.get('/users/me');
+      const data = await api.get('/users/profile');
       setUser(data);
     } catch {
       setUser(null);

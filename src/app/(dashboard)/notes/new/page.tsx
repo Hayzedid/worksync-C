@@ -1,9 +1,10 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "../../../../api";
 import { FileText, Plus } from "lucide-react";
+import { useToast } from "../../../../components/toast";
 
 export default function NewNotePage() {
   const [title, setTitle] = useState("");
@@ -11,16 +12,39 @@ export default function NewNotePage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { addToast } = useToast();
+  const searchParams = useSearchParams();
+  const wsIdFromUrl = searchParams?.get('ws');
+  const projectFromUrl = searchParams?.get('project');
+  const projectId = projectFromUrl ? (Number.isFinite(parseInt(projectFromUrl, 10)) ? parseInt(projectFromUrl, 10) : null) : null;
+  const [currentWsId, setCurrentWsId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const ss = typeof window !== 'undefined' ? sessionStorage.getItem('current_workspace_id') : null;
+    setCurrentWsId(wsIdFromUrl || ss);
+  }, [wsIdFromUrl]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      await api.post("/notes", { title, content });
-      router.push("/notes");
+      await api.post(
+        "/notes",
+        projectId != null ? { title, content, project_id: projectId } : { title, content },
+        currentWsId != null
+          ? { params: { ws: currentWsId } }
+          : undefined
+      );
+      addToast({ title: "Note created", description: title, variant: "success" });
+      if (currentWsId != null) {
+        router.push(`/notes?ws=${currentWsId}`);
+      } else {
+        router.push("/notes");
+      }
     } catch (err: any) {
       setError(err.message || "Failed to create note");
+      addToast({ title: "Failed to create note", description: err?.message || "", variant: "error" });
     } finally {
       setLoading(false);
     }
@@ -35,21 +59,23 @@ export default function NewNotePage() {
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-[#015958] font-semibold mb-1">Title</label>
-            <input value={title} onChange={e => setTitle(e.target.value)} className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" required />
+            <label htmlFor="note-title" className="block text-[#015958] font-semibold mb-1">Title</label>
+            <input id="note-title" name="title" autoComplete="off" value={title} onChange={e => setTitle(e.target.value)} className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" required />
           </div>
           <div>
-            <label className="block text-[#015958] font-semibold mb-1">Content</label>
-            <textarea value={content} onChange={e => setContent(e.target.value)} rows={6} className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" />
+            <label htmlFor="note-content" className="block text-[#015958] font-semibold mb-1">Content</label>
+            <textarea id="note-content" name="content" autoComplete="off" value={content} onChange={e => setContent(e.target.value)} rows={6} className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" />
           </div>
           {error && <div className="text-red-500">{error}</div>}
-          <button disabled={loading} className="bg-[#0FC2C0] text-white px-4 py-2 rounded font-semibold hover:bg-[#0CABA8]">
-            {loading ? "Creating..." : "Create Note"}
-          </button>
+          <div className="flex items-center justify-end gap-3">
+            <Link href="/notes" className="px-4 py-2 rounded border border-[#0CABA8]/40 text-[#015958] bg-white hover:bg-[#F6FFFE]">Cancel</Link>
+            <button disabled={loading} className="bg-[#0FC2C0] text-white px-4 py-2 rounded font-semibold hover:bg-[#0CABA8] disabled:opacity-70">
+              {loading ? "Creating..." : "Create Note"}
+            </button>
+          </div>
         </form>
       </div>
     </div>
   );
 }
-
 

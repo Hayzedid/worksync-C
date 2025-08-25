@@ -33,7 +33,8 @@ export function CommentList({ comments, onAdd, onEdit, onDelete }: CommentListPr
         }}
         className="flex gap-2 mb-4"
       >
-        <input name="comment" className="flex-1 px-3 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" placeholder="Add a comment..." />
+        <label htmlFor="comment-input" className="sr-only">Add a comment</label>
+        <input id="comment-input" name="comment" className="flex-1 px-3 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" placeholder="Add a comment..." />
         <Button type="submit" className="bg-[#0FC2C0] text-white">Post</Button>
       </form>
       {comments.length === 0 && <div className="text-[#015958]">No comments yet.</div>}

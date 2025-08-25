@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "../../../api";
+import { login as loginRequest } from "../../../api/auth";
+
 import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
@@ -17,7 +19,7 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      await api.post("/auth/login", form);
+      await loginRequest(form.email, form.password);
       router.replace("/dashboard");
     } catch (err: any) {
       setError(err.message || "Login failed");
@@ -30,12 +32,17 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0FC2C0] via-[#0CABA8] to-[#023535]">
       <form onSubmit={handleSubmit} className="max-w-md w-full p-8 bg-white/90 rounded-xl shadow-2xl border border-[#0CABA8]/30 backdrop-blur-md">
         <h1 className="text-2xl font-bold mb-4 text-[#0FC2C0]">Login</h1>
-        <input className="w-full mb-3 px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" placeholder="Email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+        <label htmlFor="login-email" className="sr-only">Email</label>
+        <input id="login-email" name="email" autoComplete="email" className="w-full mb-3 px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" placeholder="Email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
         <div className="relative mb-3">
+          <label htmlFor="login-password" className="sr-only">Password</label>
           <input
             className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE] pr-10"
             type={showPassword ? "text" : "password"}
             placeholder="Password"
+            id="login-password"
+            name="password"
+            autoComplete="current-password"
             value={form.password}
             onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
           />
@@ -51,7 +58,8 @@ export default function LoginPage() {
         </div>
         {error && <div className="text-red-500 mb-2">{error}</div>}
         <button className="bg-[#0FC2C0] text-white px-4 py-2 rounded w-full transition-colors duration-200 hover:bg-[#0CABA8]" disabled={loading}>{loading ? "Logging in..." : "Login"}</button>
-        <div className="mt-4 text-center">
+        <div className="mt-4 flex items-center justify-between text-sm">
+          <Link href="/forgot-password" className="text-[#0CABA8] hover:underline">Forgot password?</Link>
           <Link href="/register" className="text-[#0CABA8] hover:underline">Don't have an account? Register</Link>
         </div>
       </form>

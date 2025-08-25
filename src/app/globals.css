@@ -35,3 +35,121 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* FullCalendar theme overrides (dark teal theme) */
+/* Fallback vars at :root so colors apply even if scoping differs */
+:root {
+  /* Use darkest brand color for calendar background */
+  --fc-page-bg-color: #015958; /* var(--color-teal-deepest) */
+  --fc-neutral-bg-color: #073b3a; /* slightly lighter for sections */
+  --fc-border-color: #0CABA8; /* medium teal for lines */
+  --fc-today-bg-color: rgba(20, 184, 166, 0.22);
+
+  /* Event colors with good contrast on dark bg */
+  --fc-event-bg-color: #0FC2C0;
+  --fc-event-border-color: #14b8a6;
+  --fc-event-text-color: #052f2e;
+
+  /* Toolbar buttons */
+  --fc-button-bg-color: #14b8a6;
+  --fc-button-border-color: #0FC2C0;
+  --fc-button-text-color: #ffffff;
+  --fc-button-hover-bg-color: #0FC2C0;
+  --fc-button-hover-border-color: #0FC2C0;
+  --fc-button-active-bg-color: #0CABA8;
+  --fc-button-active-border-color: #0CABA8;
+}
+
+.fc, .fc-theme-standard {
+  /* Base colors */
+  --fc-page-bg-color: #015958;
+  --fc-neutral-bg-color: #073b3a;
+  --fc-border-color: #0CABA8;
+  --fc-today-bg-color: rgba(20, 184, 166, 0.22);
+
+  /* Event colors */
+  --fc-event-bg-color: #0FC2C0;
+  --fc-event-border-color: #0CABA8;
+  --fc-event-text-color: #073b3a;
+
+  /* Button colors */
+  --fc-button-bg-color: #0FC2C0;
+  --fc-button-border-color: #0CABA8;
+  --fc-button-text-color: #ffffff;
+  --fc-button-hover-bg-color: #0CABA8;
+  --fc-button-hover-border-color: #0CABA8;
+  --fc-button-active-bg-color: #015958;
+  --fc-button-active-border-color: #015958;
+}
+
+/* Toolbar */
+.fc .fc-toolbar-title {
+  color: #015958;
+  font-weight: 700;
+}
+
+.fc .fc-button {
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+/* Grid and header */
+.fc .fc-col-header-cell-cushion,
+.fc .fc-daygrid-day-number {
+  color: #e6fffb;
+}
+
+.fc .fc-scrollgrid,
+.fc .fc-view-harness,
+.fc .fc-view-harness > .fc-view,
+.fc .fc-timegrid,
+.fc .fc-daygrid {
+  background: #015958; /* darkest brand */
+}
+
+.fc .fc-timegrid-slot,
+.fc .fc-scrollgrid,
+.fc.fc-theme-standard td,
+.fc.fc-theme-standard th,
+.fc-theme-standard td,
+.fc-theme-standard th {
+  border-color: #0CABA8 !important;
+}
+
+/* Day cell background tint */
+.fc .fc-daygrid-day-frame {
+  background: #015958;
+}
+
+/* Today ring */
+.fc .fc-day-today .fc-daygrid-day-frame {
+  background: rgba(20, 184, 166, 0.22) !important;
+}
+
+/* Selection highlight */
+.fc .fc-highlight {
+  background: rgba(20, 184, 166, 0.20);
+}
+
+/* Events */
+.fc .fc-daygrid-event,
+.fc .fc-timegrid-event {
+  border-radius: 6px;
+}
+
+.fc .fc-timegrid-event .fc-event-main,
+.fc .fc-daygrid-event .fc-event-main {
+  padding: 2px 4px;
+}
+
+/* List view */
+.fc .fc-list { border-color: #0CABA8; }
+
+.fc .fc-list-day-cushion {
+  background: #073b3a;
+  color: #e6fffb;
+}
+
+.fc .fc-list-event:hover {
+  background: #0b6d6c;
+}

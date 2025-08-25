@@ -30,6 +30,7 @@ export default function RegisterPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+
     if (!form.username || !form.email || !form.password || !form.confirmPassword || !form.firstName || !form.lastName) {
       setError("Please fill in all required fields.");
       return;
@@ -44,15 +45,13 @@ export default function RegisterPage() {
     }
     setLoading(true);
     try {
-      const data = new FormData();
-      data.append("username", form.username);
-      data.append("email", form.email);
-      data.append("password", form.password);
-      data.append("first_name", form.firstName);
-      data.append("last_name", form.lastName);
-      data.append("timezone", form.timezone);
-      if (profilePicture) data.append("profile_picture", profilePicture);
-      await api.post("/auth/register", data);
+      await api.post("/auth/register", {
+        email: form.email,
+        password: form.password,
+        firstName: form.firstName,
+        lastName: form.lastName,
+        userName: form.username,
+      });
       router.push("/login");
     } catch (err: any) {
       setError(err.message || "Registration failed");
@@ -63,17 +62,25 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0FC2C0] via-[#0CABA8] to-[#023535]">
-      <form onSubmit={handleSubmit} className="max-w-md w-full p-8 bg-white/90 rounded-xl shadow-2xl border border-[#0CABA8]/30 backdrop-blur-md" encType="multipart/form-data">
+      <form onSubmit={handleSubmit} className="max-w-md w-full p-8 bg-white/90 rounded-xl shadow-2xl border border-[#0CABA8]/30 backdrop-blur-md">
         <h1 className="text-2xl font-bold mb-4 text-[#0FC2C0]">Register</h1>
-        <input className="w-full mb-3 px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" placeholder="Username" value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} required />
-        <input className="w-full mb-3 px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" placeholder="First Name" value={form.firstName} onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))} required />
-        <input className="w-full mb-3 px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" placeholder="Last Name" value={form.lastName} onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))} required />
-        <input className="w-full mb-3 px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" placeholder="Email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} required />
+        <label htmlFor="reg-username" className="sr-only">Username</label>
+        <input id="reg-username" name="username" autoComplete="username" className="w-full mb-3 px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" placeholder="Username" value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} required />
+        <label htmlFor="reg-first-name" className="sr-only">First Name</label>
+        <input id="reg-first-name" name="firstName" autoComplete="given-name" className="w-full mb-3 px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" placeholder="First Name" value={form.firstName} onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))} required />
+        <label htmlFor="reg-last-name" className="sr-only">Last Name</label>
+        <input id="reg-last-name" name="lastName" autoComplete="family-name" className="w-full mb-3 px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" placeholder="Last Name" value={form.lastName} onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))} required />
+        <label htmlFor="reg-email" className="sr-only">Email</label>
+        <input id="reg-email" name="email" autoComplete="email" className="w-full mb-3 px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" placeholder="Email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} required />
         <div className="relative mb-3">
+          <label htmlFor="reg-password" className="sr-only">Password</label>
           <input
             className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE] pr-10"
             type={showPassword ? "text" : "password"}
             placeholder="Password"
+            id="reg-password"
+            name="password"
+            autoComplete="new-password"
             value={form.password}
             onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
             required
@@ -89,10 +96,14 @@ export default function RegisterPage() {
           </button>
         </div>
         <div className="relative mb-3">
+          <label htmlFor="reg-confirm-password" className="sr-only">Confirm Password</label>
           <input
             className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE] pr-10"
             type={showConfirmPassword ? "text" : "password"}
             placeholder="Confirm Password"
+            id="reg-confirm-password"
+            name="confirmPassword"
+            autoComplete="new-password"
             value={form.confirmPassword}
             onChange={e => setForm(f => ({ ...f, confirmPassword: e.target.value }))}
             required
@@ -107,8 +118,8 @@ export default function RegisterPage() {
             {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
           </button>
         </div>
-        <label className="flex items-center mb-3 text-[#015958]">
-          <input type="checkbox" className="mr-2" checked={terms} onChange={e => setTerms(e.target.checked)} />
+        <label htmlFor="reg-terms" className="flex items-center mb-3 text-[#015958]">
+          <input id="reg-terms" name="terms" type="checkbox" className="mr-2" checked={terms} onChange={e => setTerms(e.target.checked)} />
           I agree to the <a href="/terms" className="text-[#0CABA8] hover:underline ml-1">terms and conditions</a>
         </label>
         {error && <div className="text-red-500 mb-2">{error}</div>}

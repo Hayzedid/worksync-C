@@ -56,23 +56,44 @@ export default function SettingsPage() {
             </div>
           )}
           {activeTab === "Workspace" && (
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-6">
               <div>
                 <label className="block text-[#015958] font-semibold mb-1">Workspace Name</label>
                 <input className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" value="Acme Corp" readOnly />
               </div>
-              <div>
-                <label className="block text-[#015958] font-semibold mb-1">Theme</label>
-                <select className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]">
-                  <option>Light</option>
-                  <option>Dark</option>
-                </select>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[#015958] font-semibold mb-1">Theme</label>
+                  <select className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]">
+                    <option>Light</option>
+                    <option>Dark</option>
+                  </select>
+                </div>
+                <div className="flex items-end">
+                  <Button className="bg-[#008F8C] text-white px-6 py-3 rounded-lg font-semibold hover:bg-[#0FC2C0]">Save Changes</Button>
+                </div>
               </div>
-              <Button className="bg-[#008F8C] text-white px-6 py-3 rounded-lg font-semibold hover:bg-[#0FC2C0]">Edit Workspace</Button>
+
+              {/* Member Management */}
+              <div className="border-t border-[#0CABA8]/20 pt-4">
+                <div className="text-[#015958] font-semibold mb-2">Members</div>
+                <div className="text-sm text-[#0CABA8] mb-3">Manage who has access to this workspace.</div>
+                <div className="flex flex-wrap gap-3">
+                  <Link href="/workspace/members" className="px-4 py-2 rounded border border-[#0CABA8]/40 text-[#015958] bg-white hover:bg-[#F6FFFE]">View Members</Link>
+                  <Link href="/workspace/invite" className="px-4 py-2 rounded bg-[#0FC2C0] text-white hover:bg-[#0CABA8]">Invite Member</Link>
+                </div>
+              </div>
+
+              {/* Danger Zone */}
+              <div className="border-t border-[#0CABA8]/20 pt-4">
+                <div className="text-[#015958] font-semibold mb-2">Danger Zone</div>
+                <div className="text-sm text-[#0CABA8] mb-3">Deleting a workspace is permanent and will remove all projects, tasks, and notes in it.</div>
+                <button className="px-4 py-2 rounded bg-red-500 text-white hover:bg-red-600">Delete Workspace</button>
+              </div>
             </div>
           )}
         </div>
       </div>
     </div>
   );
-} 
+}
