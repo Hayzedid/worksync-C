@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "../../../../api";
-import { FileText, Plus } from "lucide-react";
+import { FileText } from "lucide-react";
 import { useToast } from "../../../../components/toast";
 
 export default function NewNotePage() {
@@ -29,9 +29,14 @@ export default function NewNotePage() {
     setError("");
     setLoading(true);
     try {
+      // Clean payload: convert undefined to null for all fields
+      const rawBody = projectId != null ? { title, content, project_id: projectId } : { title, content };
+      const body = Object.fromEntries(
+        Object.entries(rawBody).map(([k, v]) => [k, v === undefined ? null : v])
+      );
       await api.post(
         "/notes",
-        projectId != null ? { title, content, project_id: projectId } : { title, content },
+        body,
         currentWsId != null
           ? { params: { ws: currentWsId } }
           : undefined
@@ -42,9 +47,11 @@ export default function NewNotePage() {
       } else {
         router.push("/notes");
       }
-    } catch (err: any) {
-      setError(err.message || "Failed to create note");
-      addToast({ title: "Failed to create note", description: err?.message || "", variant: "error" });
+    } catch (err: unknown) {
+      const maybe = (err as Record<string, unknown>)?.message;
+      const msg = typeof maybe === 'string' ? maybe : "Failed to create note";
+      setError(msg);
+      addToast({ title: "Failed to create note", description: typeof maybe === 'string' ? maybe : "", variant: "error" });
     } finally {
       setLoading(false);
     }

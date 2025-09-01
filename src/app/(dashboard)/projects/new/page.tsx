@@ -40,7 +40,11 @@ export default function NewProjectPage() {
     setError("");
     setLoading(true);
     try {
-      const body: any = { name, status: status.toLowerCase() };
+      // Clean payload: convert undefined to null for all fields
+      const rawBody = { name, status: status?.toLowerCase() } as Record<string, unknown>;
+      const body = Object.fromEntries(
+        Object.entries(rawBody).map(([k, v]) => [k, v === undefined ? null : v])
+      );
       const created = await api.post(
         "/projects",
         body,
@@ -58,8 +62,9 @@ export default function NewProjectPage() {
       } else {
         router.push("/workspace/projects");
       }
-    } catch (err: any) {
-      setError(err.message || "Failed to create project");
+    } catch (err: unknown) {
+      const maybe = (err as Record<string, unknown>)?.message;
+      setError(typeof maybe === 'string' ? maybe : "Failed to create project");
     } finally {
       setLoading(false);
     }
@@ -75,11 +80,11 @@ export default function NewProjectPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-[#015958] font-semibold mb-1">Name</label>
-            <input value={name} onChange={e => setName(e.target.value)} className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" required />
+            <input aria-label="Project name" placeholder="e.g., Website Redesign" value={name} onChange={e => setName(e.target.value)} className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" required />
           </div>
           <div>
             <label className="block text-[#015958] font-semibold mb-1">Status</label>
-            <select value={status} onChange={e => setStatus(e.target.value)} className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]">
+            <select aria-label="Project status" value={status} onChange={e => setStatus(e.target.value)} className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]">
               <option>Active</option>
               <option>Planning</option>
               <option>Completed</option>

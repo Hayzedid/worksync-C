@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "../../../api/client";
+import { api } from "../../../api";
 
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -29,15 +29,15 @@ export default function EventsPage() {
   const qc = useQueryClient();
   const calendarRef = useRef<FullCalendar | null>(null);
 
-  const { data, isLoading, isError, error } = useQuery<any>({
+  const { data, isLoading, isError, error } = useQuery<unknown>({
     queryKey: ["events"],
     queryFn: () => api.get("/events"),
   });
 
   const raw: RawEvent[] = Array.isArray(data)
-    ? data
-    : data?.events && Array.isArray(data.events)
-    ? data.events
+    ? data as RawEvent[]
+    : (data as Record<string, unknown>)?.['events'] && Array.isArray((data as Record<string, unknown>)['events'])
+    ? (data as Record<string, unknown>)['events'] as RawEvent[]
     : [];
 
   const events = raw.map(e => {
@@ -52,10 +52,10 @@ export default function EventsPage() {
       start,
       end,
       allDay,
-    } as any;
+    };
   });
 
-  async function handleEventDropResize(info: any) {
+  async function handleEventDropResize(info: { event: { id: string | number; start?: Date | null; end?: Date | null; allDay?: boolean }; revert: () => void }) {
     const ev = info.event;
     try {
       await api.patch(`/events/${ev.id}`, {
@@ -64,7 +64,7 @@ export default function EventsPage() {
         all_day: ev.allDay ? 1 : 0,
       });
       qc.invalidateQueries({ queryKey: ["events"] });
-    } catch (err) {
+    } catch {
       info.revert();
     }
   }
@@ -77,7 +77,7 @@ export default function EventsPage() {
           <Link href="/events/new" className="px-4 py-2 bg-[#0FC2C0] text-white rounded hover:bg-[#0CABA8] transition-colors font-semibold">New Event</Link>
         </div>
         {isLoading && <div className="text-[#e6fffb] p-2">Loading events…</div>}
-        {isError && <div className="text-red-400 p-2">Failed to load events{(error as any)?.message ? `: ${(error as any).message}` : ""}</div>}
+        {isError && <div className="text-red-400 p-2">Failed to load events{(error && typeof (error as unknown as Record<string, unknown>)['message'] === 'string') ? `: ${String((error as unknown as Record<string, unknown>)['message'])}` : ""}</div>}
         <FullCalendar
           ref={calendarRef}
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}

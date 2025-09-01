@@ -36,12 +36,19 @@ export default function InviteMemberPage() {
     try {
       if (!wsId) throw new Error("No workspace context");
       const normalized = email.trim().toLowerCase();
-      await api.post("/workspaces/invite", { workspace_id: Number(wsId), email: normalized });
+      // Clean payload: convert undefined to null for all fields
+      const rawBody = { workspace_id: Number(wsId), email: normalized };
+      const body = Object.fromEntries(
+        Object.entries(rawBody).map(([k, v]) => [k, v === undefined ? null : v])
+      );
+      await api.post("/workspaces/invite", body);
       addToast({ title: "Invitation sent", description: normalized, variant: "success" });
       router.push(`/workspace?ws=${wsId}`);
-    } catch (err: any) {
-      setError(err.message || "Failed to send invite");
-      addToast({ title: "Invite failed", description: err?.message || "", variant: "error" });
+    } catch (err: unknown) {
+      const maybe = (err as Record<string, unknown>)?.message;
+      const msg = typeof maybe === 'string' ? maybe : "Failed to send invite";
+      setError(msg);
+      addToast({ title: "Invite failed", description: typeof maybe === 'string' ? maybe : "", variant: "error" });
     } finally {
       setLoading(false);
     }

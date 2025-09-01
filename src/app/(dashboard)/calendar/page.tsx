@@ -3,7 +3,7 @@
 import React, { useMemo, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { api } from "../../../api/client";
+import { api } from "../../../api";
 
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -23,21 +23,34 @@ type RawEvent = {
   project_id?: number;
 };
 
+type EventInput = {
+  id: string;
+  title: string;
+  start?: string;
+  end?: string;
+  allDay?: boolean;
+  backgroundColor?: string;
+  borderColor?: string;
+};
+
 export default function CalendarPage() {
   const router = useRouter();
   const qc = useQueryClient();
   const calendarRef = useRef<FullCalendar | null>(null);
 
-  const { data, isLoading, isError, error } = useQuery<any>({
+  const { data, isLoading, isError, error } = useQuery<unknown>({
     queryKey: ["events"],
     queryFn: () => api.get("/events"),
   });
 
-  const raw: RawEvent[] = Array.isArray(data)
-    ? data
-    : data?.events && Array.isArray(data.events)
-    ? data.events
-    : [];
+  const raw: RawEvent[] = (() => {
+    if (Array.isArray(data)) return data as RawEvent[];
+    if (data && typeof data === 'object') {
+      const d = data as Record<string, unknown>;
+      if (Array.isArray(d['events'])) return d['events'] as RawEvent[];
+    }
+    return [];
+  })();
 
   const colorMap = useMemo(() => {
     const palette = [
@@ -56,7 +69,7 @@ export default function CalendarPage() {
     return map;
   }, [raw]);
 
-  const events = useMemo(() => {
+  const events = useMemo((): EventInput[] => {
     return raw.map(e => {
       const start = e.start ?? (e.date ? new Date(e.date).toISOString() : undefined);
       const end = e.end ?? undefined;
@@ -72,11 +85,11 @@ export default function CalendarPage() {
         allDay,
         backgroundColor: color,
         borderColor: color,
-      } as any;
+      };
     });
   }, [raw, colorMap]);
 
-  async function handleEventDropResize(info: any) {
+  async function handleEventDropResize(info: { event: { id: string | number; start?: Date | null; end?: Date | null; allDay?: boolean }; revert: () => void }) {
     const ev = info.event;
     try {
       await api.patch(`/events/${ev.id}`, {
@@ -85,7 +98,8 @@ export default function CalendarPage() {
         all_day: ev.allDay ? 1 : 0,
       });
       qc.invalidateQueries({ queryKey: ["events"] });
-    } catch (err) {
+    } catch {
+      // revert on failure
       info.revert();
     }
   }
@@ -94,7 +108,7 @@ export default function CalendarPage() {
     <main className="min-h-screen p-4 md:p-8">
       <div className="max-w-6xl mx-auto rounded-xl p-2 md:p-4">
         {isLoading && <div className="text-[#e6fffb] p-2">Loading events…</div>}
-        {isError && <div className="text-red-400 p-2">Failed to load events{(error as any)?.message ? `: ${(error as any).message}` : ""}</div>}
+  {isError && <div className="text-red-400 p-2">Failed to load events{(error && typeof (error as unknown as Record<string, unknown>)['message'] === 'string') ? `: ${String((error as unknown as Record<string, unknown>)['message'])}` : ""}</div>}
         <FullCalendar
           ref={calendarRef}
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}

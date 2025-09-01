@@ -1,11 +1,12 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { api } from "../../../../api";
 
-export default function ResetPasswordPage({ params }: { params: { token: string } }) {
-  const token = params.token;
+export default function ResetPasswordPage() {
+  const params = useParams() as { token?: string } | null;
+  const token = params?.token ?? '';
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
@@ -30,8 +31,9 @@ export default function ResetPasswordPage({ params }: { params: { token: string 
       await api.post("/auth/reset-password", { token, password });
       setSuccess("Password updated. You can now login.");
       setTimeout(() => router.push("/login"), 1500);
-    } catch (err: any) {
-      setError(err?.message || "Failed to reset password");
+    } catch (err: unknown) {
+      if (err instanceof Error) setError(err.message);
+      else setError(String(err) || "Failed to reset password");
     } finally {
       setLoading(false);
     }

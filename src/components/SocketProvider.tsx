@@ -8,11 +8,12 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Connect on mount, disconnect on unmount
-    if (!socketRef.current.connected) {
-      socketRef.current.connect();
+    const currentSocket = socketRef.current;
+    if (!currentSocket.connected) {
+      currentSocket.connect();
     }
     return () => {
-      socketRef.current.disconnect();
+      currentSocket.disconnect();
     };
   }, []);
 

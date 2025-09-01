@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { api } from "../../../../api/client";
+import { api } from "../../../../api";
 import { Calendar, Plus } from "lucide-react";
 import { useToast } from "../../../../components/toast";
 
@@ -23,6 +23,8 @@ export default function NewEventPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { addToast } = useToast();
+  // keep Plus import for future UI iconography
+  void Plus;
 
   // Prefill from query params sent by calendar (start, end, all_day)
   useEffect(() => {
@@ -83,20 +85,26 @@ export default function NewEventPage() {
       for (let i = 0; i < count; i++) {
         const s = i === 0 ? start : addDays(start, i);
         const e = i === 0 ? end : addDays(end, i);
-        const payload: any = {
+        // Clean payload: convert undefined to null for all fields
+        const rawPayload: Record<string, unknown> = {
           title,
           start: s.toISOString(),
           end: e.toISOString(),
           all_day: allDay ? 1 : 0,
           category,
         };
+        const payload = Object.fromEntries(
+          Object.entries(rawPayload).map(([k, v]) => [k, v === undefined ? null : v])
+        );
         await api.post("/events", payload);
       }
       addToast({ title: "Event created", description: title, variant: "success" });
       router.push("/events");
-    } catch (err: any) {
-      setError(err?.message || "Failed to create event");
-      addToast({ title: "Failed to create event", description: err?.message || "", variant: "error" });
+    } catch (err: unknown) {
+      const message = (err as Record<string, unknown>)?.message;
+      const errorMsg = typeof message === 'string' ? message : "Failed to create event";
+      setError(errorMsg);
+      addToast({ title: "Failed to create event", description: errorMsg, variant: "error" });
     } finally {
       setLoading(false);
     }
@@ -112,13 +120,21 @@ export default function NewEventPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-[#015958] font-semibold mb-1">Title</label>
-            <input value={title} onChange={e => setTitle(e.target.value)} className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" required />
+            <input 
+              value={title} 
+              onChange={e => setTitle(e.target.value)} 
+              aria-label="Event title"
+              placeholder="Enter event title"
+              className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" 
+              required 
+            />
           </div>
           <div>
             <label className="block text-[#015958] font-semibold mb-1">Category</label>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
+              aria-label="Event category"
               className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]"
             >
               <option value="birthday">Birthday</option>
@@ -158,22 +174,47 @@ export default function NewEventPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-[#015958] font-semibold mb-1">Start date</label>
-              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" required />
+              <input 
+                type="date" 
+                value={startDate} 
+                onChange={e => setStartDate(e.target.value)} 
+                aria-label="Event start date"
+                className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" 
+                required 
+              />
             </div>
             {!allDay && (
               <div>
                 <label className="block text-[#015958] font-semibold mb-1">Start time</label>
-                <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" />
+                <input 
+                  type="time" 
+                  value={startTime} 
+                  onChange={e => setStartTime(e.target.value)} 
+                  aria-label="Event start time"
+                  className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" 
+                />
               </div>
             )}
             <div>
               <label className="block text-[#015958] font-semibold mb-1">End date</label>
-              <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" />
+              <input 
+                type="date" 
+                value={endDate} 
+                onChange={e => setEndDate(e.target.value)} 
+                aria-label="Event end date"
+                className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" 
+              />
             </div>
             {!allDay && (
               <div>
                 <label className="block text-[#015958] font-semibold mb-1">End time</label>
-                <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" />
+                <input 
+                  type="time" 
+                  value={endTime} 
+                  onChange={e => setEndTime(e.target.value)} 
+                  aria-label="Event end time"
+                  className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" 
+                />
               </div>
             )}
           </div>
@@ -189,7 +230,16 @@ export default function NewEventPage() {
               <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block font-semibold mb-1">For how many days</label>
-                  <input type="number" min={1} max={365} value={repeatDays} onChange={(e) => setRepeatDays(Number(e.target.value))} className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] bg-white" />
+                  <input 
+                    type="number" 
+                    min={1} 
+                    max={365} 
+                    value={repeatDays} 
+                    onChange={(e) => setRepeatDays(Number(e.target.value))} 
+                    aria-label="Number of repeat days"
+                    placeholder="Enter number of days"
+                    className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] bg-white" 
+                  />
                 </div>
                 <div className="text-sm text-[#015958] self-end">Creates one event per day, consecutively.</div>
               </div>

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
+import { CollaborativeRichTextEditor } from "../../../../components/CollaborativeRichTextEditor";
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import { useParams } from "next/navigation";
@@ -20,6 +21,9 @@ export default function NoteCollaborativePage() {
   // Undo/Redo & Version History
   const [history, setHistory] = useState<{ title: string; content: string; user: string; time: string }[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
+  const undoManagerRef = useRef<Y.UndoManager | null>(null);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
 
   // For demo: use a placeholder user (replace with real user info in production)
   const localUserId = typeof window !== 'undefined' ? (window.localStorage.getItem('user_id') || 'user-' + Math.floor(Math.random() * 10000)) : 'user-demo';
@@ -36,7 +40,6 @@ export default function NoteCollaborativePage() {
   const cursors = useLiveCursors({ noteId: String(id), localUserId, localUserName, textareaRef: contentRef });
   const { addToast } = useToast();
   const socket = useSocket();
-  const [note, setNote] = useState<any>(null);
   const [content, setContent] = useState("");
   const [title, setTitle] = useState("");
   const [presence, setPresence] = useState<{ userName: string; typing: boolean; color: string }[]>([]);
@@ -53,10 +56,27 @@ export default function NoteCollaborativePage() {
     yProviderRef.current = provider;
     yTextRef.current = ytext;
 
+    // Create UndoManager for this Y.Text so undo/redo works across collaborators
+    const um = new Y.UndoManager(ytext);
+    undoManagerRef.current = um;
+    const updateStacks = () => {
+      const um = undoManagerRef.current;
+      if (!um) return;
+      // Access UndoManager properties safely
+      const undoStack = (um as unknown as Record<string, unknown>)['undoStack'];
+      const redoStack = (um as unknown as Record<string, unknown>)['redoStack'];
+      setCanUndo(Boolean(undoStack && Array.isArray(undoStack) && undoStack.length > 0));
+      setCanRedo(Boolean(redoStack && Array.isArray(redoStack) && redoStack.length > 0));
+    };
+    um.on('stack-item-added', updateStacks);
+    um.on('stack-item-popped', updateStacks);
+    um.on('stack-cleared', updateStacks);
+    // initial check
+    updateStacks();
+
     // Sync initial content from backend only if empty
     api.get(`/notes/${id}`)
       .then((data) => {
-        setNote(data);
         setTitle(data.title);
         if (ytext.length === 0 && data.content) {
           ytext.insert(0, data.content);
@@ -73,8 +93,12 @@ export default function NoteCollaborativePage() {
 
     return () => {
       ytext.unobserve(updateContent);
-      provider.destroy();
-      ydoc.destroy();
+  um.off('stack-item-added', updateStacks);
+  um.off('stack-item-popped', updateStacks);
+  um.off('stack-cleared', updateStacks);
+  undoManagerRef.current = null;
+  provider.destroy();
+  ydoc.destroy();
     };
   }, [id, addToast]);
 
@@ -82,16 +106,23 @@ export default function NoteCollaborativePage() {
   useEffect(() => {
     if (!socket || !id) return;
     socket.emit("note:join", { noteId: id, userId: localUserId, userName: localUserName });
-    socket.on("note:update", (payload: any) => {
-      if (payload.noteId === id) {
-        setTitle(payload.title);
-        setContent(payload.content);
-        setHistory(prev => ([...prev, { title: payload.title, content: payload.content, user: payload.userName || 'Remote', time: new Date().toLocaleTimeString() }]));
+    socket.on("note:update", (payload: unknown) => {
+      const p = payload as Record<string, unknown>;
+      if (p.noteId === id) {
+        setTitle(String(p.title ?? ''));
+        setContent(String(p.content ?? ''));
+        setHistory(prev => ([...prev, { 
+          title: String(p.title ?? ''), 
+          content: String(p.content ?? ''), 
+          user: String(p.userName ?? 'Remote'), 
+          time: new Date().toLocaleTimeString() 
+        }]));
         setHistoryIndex(prev => prev + 1);
       }
     });
-    socket.on("note:presence", (payload: any) => {
-      setPresence(payload.users || []);
+    socket.on("note:presence", (payload: unknown) => {
+      const p = payload as Record<string, unknown>;
+      setPresence(Array.isArray(p.users) ? p.users : []);
     });
     return () => {
       socket.emit("note:leave", { noteId: id });
@@ -137,28 +168,12 @@ export default function NoteCollaborativePage() {
   }
 
   function handleUndo() {
-    if (historyIndex > 0) {
-      const prev = history[historyIndex - 1];
-      setTitle(prev.title);
-      setContent(prev.content);
-      setHistoryIndex(historyIndex - 1);
-      if (socket) {
-        socket.emit("note:edit", { noteId: id, field: "title", value: prev.title, userName: localUserName });
-        socket.emit("note:edit", { noteId: id, field: "content", value: prev.content, userName: localUserName });
-      }
-    }
+    const um = undoManagerRef.current;
+    if (um) um.undo();
   }
   function handleRedo() {
-    if (historyIndex < history.length - 1) {
-      const next = history[historyIndex + 1];
-      setTitle(next.title);
-      setContent(next.content);
-      setHistoryIndex(historyIndex + 1);
-      if (socket) {
-        socket.emit("note:edit", { noteId: id, field: "title", value: next.title, userName: localUserName });
-        socket.emit("note:edit", { noteId: id, field: "content", value: next.content, userName: localUserName });
-      }
-    }
+    const um = undoManagerRef.current;
+    if (um) um.redo();
   }
 
   // Live notifications for notes (must be after all variable declarations and useEffects)
@@ -177,8 +192,8 @@ export default function NoteCollaborativePage() {
     <div className="max-w-2xl mx-auto p-8">
       <h1 className="text-2xl font-bold mb-4">Collaborative Note</h1>
       <div className="flex gap-4 mb-4">
-        <button onClick={handleUndo} disabled={historyIndex <= 0} className="px-2 py-1 rounded bg-gray-200 disabled:opacity-50">Undo</button>
-        <button onClick={handleRedo} disabled={historyIndex >= history.length - 1} className="px-2 py-1 rounded bg-gray-200 disabled:opacity-50">Redo</button>
+  <button onClick={handleUndo} disabled={!canUndo} className="px-2 py-1 rounded bg-gray-200 disabled:opacity-50">Undo</button>
+  <button onClick={handleRedo} disabled={!canRedo} className="px-2 py-1 rounded bg-gray-200 disabled:opacity-50">Redo</button>
   <button onClick={() => setShowHistory(h => !h)} className="px-2 py-1 rounded bg-gray-200">History</button>
       </div>
       <LiveCursors
@@ -202,14 +217,13 @@ export default function NoteCollaborativePage() {
         onChange={e => handleEdit("title", e.target.value)}
         placeholder="Note title"
       />
-      <textarea
-        ref={contentRef}
-        className="w-full border rounded p-2 min-h-[200px]"
-        value={content}
-        onChange={e => handleEdit("content", e.target.value)}
-        placeholder="Start writing..."
-        spellCheck={false}
-        autoCorrect="off"
+      <CollaborativeRichTextEditor
+        docId={String(id)}
+        userName={localUserName}
+        userColor="#0FC2C0"
+  externalYdoc={ydocRef.current ?? undefined}
+  externalProvider={yProviderRef.current ?? undefined}
+  externalUndoManager={undoManagerRef.current ?? undefined}
       />
       {/* Version History Sidebar */}
       {showHistory && (

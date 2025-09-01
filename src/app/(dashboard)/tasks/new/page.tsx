@@ -29,9 +29,14 @@ export default function NewTaskPage() {
     setError("");
     setLoading(true);
     try {
+      // Clean payload: convert undefined to null for all fields
+      const rawBody = projectId != null ? { title, status, project_id: projectId } : { title, status };
+      const body = Object.fromEntries(
+        Object.entries(rawBody).map(([k, v]) => [k, v === undefined ? null : v])
+      );
       await api.post(
         "/tasks",
-        projectId != null ? { title, status, project_id: projectId } : { title, status },
+        body,
         currentWsId != null ? { params: { ws: currentWsId } } : undefined
       );
       addToast({ title: "Task created", description: title, variant: "success" });
@@ -40,9 +45,11 @@ export default function NewTaskPage() {
       } else {
         router.push("/tasks");
       }
-    } catch (err: any) {
-      setError(err.message || "Failed to create task");
-      addToast({ title: "Failed to create task", description: err?.message || "", variant: "error" });
+    } catch (err: unknown) {
+      const maybe = (err as Record<string, unknown>)?.message;
+      const msg = typeof maybe === 'string' ? maybe : "Failed to create task";
+      setError(msg);
+      addToast({ title: "Failed to create task", description: typeof maybe === 'string' ? maybe : "", variant: "error" });
     } finally {
       setLoading(false);
     }
@@ -58,11 +65,11 @@ export default function NewTaskPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-[#015958] font-semibold mb-1">Title</label>
-            <input value={title} onChange={e => setTitle(e.target.value)} className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" required />
+              <input aria-label="Task title" placeholder="e.g., Setup repository" value={title} onChange={e => setTitle(e.target.value)} required className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" />
           </div>
           <div>
             <label className="block text-[#015958] font-semibold mb-1">Status</label>
-            <select value={status} onChange={e => setStatus(e.target.value)} className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]">
+              <select aria-label="Task status" value={status} onChange={e => setStatus(e.target.value)} className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]">
               <option>Pending</option>
               <option>In Progress</option>
               <option>Completed</option>

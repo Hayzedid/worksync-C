@@ -7,30 +7,43 @@ import { api } from "../../../../api";
 import { Folder, FolderPlus } from "lucide-react";
 
 // Helpers to normalize incoming project shape
-function toWsId(p: any): number | null {
-  const raw =
-    p?.workspace?.id ??
-    p?.workspaceId ??
-    p?.workspace_id ??
-    p?.project?.workspace?.id ??
-    p?.project?.workspaceId ??
-    p?.project?.workspace_id;
+function toWsId(p: unknown): number | null {
+  const pp = p as Record<string, unknown> | null;
+  if (!pp) return null;
+  const ws = pp.workspace as Record<string, unknown> | undefined;
+  const pws = (pp.project as Record<string, unknown> | undefined)?.workspace as Record<string, unknown> | undefined;
+  const raw = ws?.id ?? pp?.workspaceId ?? pp?.workspace_id ?? pws?.id ?? (pp.project as Record<string, unknown> | undefined)?.workspaceId ?? (pp.project as Record<string, unknown> | undefined)?.workspace_id;
   const num = typeof raw === "string" ? parseInt(raw, 10) : raw;
-  return Number.isFinite(num) ? (num as number) : null;
+  return typeof num === 'number' && Number.isFinite(num) ? (num as number) : null;
 }
-function toWsName(p: any): string | null {
-  return p?.workspace?.name ?? p?.project?.workspace?.name ?? null;
+function toWsName(p: unknown): string | null {
+  const pp = p as Record<string, unknown> | null;
+  if (!pp) return null;
+  const ws = pp.workspace as Record<string, unknown> | undefined;
+  const pws = (pp.project as Record<string, unknown> | undefined)?.workspace as Record<string, unknown> | undefined;
+  if (ws && typeof ws.name === 'string') return ws.name;
+  if (pws && typeof pws.name === 'string') return pws.name;
+  return null;
 }
-function toPid(p: any): number | null {
-  const raw = p?.id ?? p?.projectId ?? p?.project_id;
+function toPid(p: unknown): number | null {
+  const pp = p as Record<string, unknown> | null;
+  if (!pp) return null;
+  const raw = pp?.id ?? pp?.projectId ?? pp?.project_id;
   const num = typeof raw === "string" ? parseInt(raw, 10) : raw;
-  return Number.isFinite(num) ? (num as number) : null;
+  return typeof num === 'number' && Number.isFinite(num) ? (num as number) : null;
 }
-function toPname(p: any): string {
-  return p?.name ?? p?.project_name ?? `Project #${toPid(p) ?? "?"}`;
+function toPname(p: unknown): string {
+  const pp = p as Record<string, unknown> | null;
+  if (!pp) return `Project #?`;
+  if (typeof pp.name === 'string') return pp.name;
+  if (typeof pp.project_name === 'string') return pp.project_name;
+  const pid = toPid(pp);
+  return `Project #${pid ?? '?'}`;
 }
-function toPstatus(p: any): string {
-  return p?.status ?? p?.project_status ?? "";
+function toPstatus(p: unknown): string {
+  const pp = p as Record<string, unknown> | null;
+  if (!pp) return "";
+  return typeof pp.status === 'string' ? pp.status : (typeof pp.project_status === 'string' ? pp.project_status : "");
 }
 
 export default function WorkspaceProjectsPage() {
@@ -73,14 +86,14 @@ export default function WorkspaceProjectsPage() {
   const effectiveWsId = wsIdFromUrl ?? currentWsId;
 
   // When no workspace is selected, run a lightweight discovery fetch to derive available workspaces from projects data
-  const { data: discoverData } = useQuery<any>({
+  const { data: discoverData } = useQuery<unknown>({
     queryKey: ["projects-discover"],
     queryFn: () => api.get("/projects"),
     enabled: effectiveWsId == null,
     staleTime: 60_000,
   });
 
-  const { data, isLoading, isError } = useQuery<any>({
+  const { data, isLoading, isError } = useQuery<unknown>({
     queryKey: ["projects", { workspace_id: effectiveWsId }],
     queryFn: () => api.get("/projects", { params: { workspace_id: effectiveWsId } }),
     enabled: effectiveWsId != null,
@@ -88,49 +101,46 @@ export default function WorkspaceProjectsPage() {
     refetchOnWindowFocus: true,
     staleTime: 0,
   });
-  const allProjects: any[] = Array.isArray(data)
-    ? data
-    : data?.projects && Array.isArray(data.projects)
-    ? data.projects
-    : [];
-
-  const discoverProjects: any[] = Array.isArray(discoverData)
-    ? discoverData
-    : discoverData?.projects && Array.isArray(discoverData.projects)
-    ? discoverData.projects
-    : [];
-
   // Distill minimal info and compute workspaces set
   const normalized = useMemo(
-    () =>
-      allProjects.map((p: any) => ({
+    () => {
+      const allProjects: unknown[] = Array.isArray(data)
+        ? (data as unknown[])
+        : (data && typeof data === 'object' && Array.isArray((data as Record<string, unknown>)['projects']))
+        ? ((data as Record<string, unknown>)['projects'] as unknown[])
+        : [];
+      
+      return allProjects.map((p: unknown) => ({
         id: toPid(p)!,
         name: toPname(p),
         status: toPstatus(p),
         wsId: toWsId(p),
         wsName: toWsName(p),
-      })),
-    [allProjects]
+      }));
+    },
+    [data]
   );
 
   const normalizedDiscover = useMemo(
-    () =>
-      discoverProjects.map((p: any) => {
-        const wsId =
-          p?.workspace?.id ??
-          p?.workspaceId ??
-          p?.workspace_id ??
-          p?.project?.workspace?.id ??
-          p?.project?.workspaceId ??
-          p?.project?.workspace_id ??
-          null;
-        const wsName =
-          p?.workspace?.name ??
-          p?.project?.workspace?.name ??
-          null;
-        return { wsId: Number.isFinite(wsId) ? (wsId as number) : (typeof wsId === 'string' && Number.isFinite(parseInt(wsId,10)) ? parseInt(wsId,10) : null), wsName };
-      }),
-    [discoverProjects]
+    () => {
+      const discoverProjects: unknown[] = Array.isArray(discoverData)
+        ? (discoverData as unknown[])
+        : (discoverData && typeof discoverData === 'object' && Array.isArray((discoverData as Record<string, unknown>)['projects']))
+        ? ((discoverData as Record<string, unknown>)['projects'] as unknown[])
+        : [];
+      
+      return discoverProjects.map((p: unknown) => {
+        const pp = p as Record<string, unknown> | null;
+        const ws = pp?.workspace as Record<string, unknown> | undefined;
+        const pws = (pp?.project as Record<string, unknown> | undefined)?.workspace as Record<string, unknown> | undefined;
+        const rawWsId = ws?.id ?? pp?.workspaceId ?? pp?.workspace_id ?? pws?.id ?? (pp?.project as Record<string, unknown> | undefined)?.workspaceId ?? (pp?.project as Record<string, unknown> | undefined)?.workspace_id ?? null;
+        const wsId = typeof rawWsId === 'string' ? (Number.isFinite(parseInt(rawWsId,10)) ? parseInt(rawWsId,10) : null) : (typeof rawWsId === 'number' && Number.isFinite(rawWsId) ? rawWsId : null);
+        const rawName = ws?.name ?? pws?.name ?? null;
+        const wsName = typeof rawName === 'string' ? rawName : null;
+        return { wsId, wsName };
+      });
+    },
+    [discoverData]
   );
 
   const workspaces = useMemo(() => {
@@ -147,7 +157,8 @@ export default function WorkspaceProjectsPage() {
     const map: Record<string, { id: number | null; name: string | null }> = {};
     for (const d of normalizedDiscover) {
       const key = d.wsId != null ? `id:${d.wsId}` : d.wsName ? `name:${d.wsName}` : "none";
-      if (!map[key]) map[key] = { id: d.wsId ?? null, name: d.wsName ?? null };
+      const name = typeof d.wsName === 'string' ? d.wsName : null;
+      if (!map[key]) map[key] = { id: d.wsId ?? null, name };
     }
     return Object.values(map).filter(w => w.id != null) as { id: number; name: string | null }[];
   }, [normalizedDiscover]);
@@ -165,10 +176,18 @@ export default function WorkspaceProjectsPage() {
     if (effectiveWsId == null) return;
     const current = searchParams.get("ws");
     const currentNum = current ? parseInt(current, 10) : null;
-    if (!Number.isFinite(currentNum as any) || currentNum !== effectiveWsId) {
-      const usp = new URLSearchParams(searchParams as any);
-      usp.set("ws", String(effectiveWsId));
-      router.replace(`?${usp.toString()}`);
+    if (!Number.isFinite(currentNum as number) || currentNum !== effectiveWsId) {
+      // preserve existing params by parsing current location search if available
+      try {
+        const currentRaw = typeof window !== 'undefined' ? window.location.search : '';
+        const base = new URLSearchParams(currentRaw);
+        base.set("ws", String(effectiveWsId));
+        router.replace(`?${base.toString()}`);
+      } catch {
+        const simple = new URLSearchParams();
+        simple.set("ws", String(effectiveWsId));
+        router.replace(`?${simple.toString()}`);
+      }
     }
   }, [effectiveWsId, searchParams, router]);
 
@@ -203,7 +222,8 @@ export default function WorkspaceProjectsPage() {
           <div className="mb-6 p-4 bg-white border border-[#0CABA8]/30 rounded">
             <div className="text-[#015958] mb-2">Select a workspace to view projects:</div>
             <div className="flex items-center gap-3">
-              <select
+                <select
+                  aria-label="Choose workspace"
                 className="border border-[#0CABA8]/40 rounded px-3 py-2 text-[#015958]"
                 value={""}
                 onChange={(e) => {
@@ -211,9 +231,16 @@ export default function WorkspaceProjectsPage() {
                   if (Number.isFinite(next)) {
                     setCurrentWsId(next);
                     if (typeof window !== "undefined") sessionStorage.setItem("current_workspace_id", String(next));
-                    const usp = new URLSearchParams(searchParams as any);
-                    usp.set("ws", String(next));
-                    router.replace(`?${usp.toString()}`);
+                    try {
+                      const currentRaw = typeof window !== 'undefined' ? window.location.search : '';
+                      const usp = new URLSearchParams(currentRaw);
+                      usp.set("ws", String(next));
+                      router.replace(`?${usp.toString()}`);
+                    } catch {
+                      const usp = new URLSearchParams();
+                      usp.set("ws", String(next));
+                      router.replace(`?${usp.toString()}`);
+                    }
                   }
                 }}
               >
@@ -235,21 +262,30 @@ export default function WorkspaceProjectsPage() {
           <div className="mb-4">
             <label className="block text-[#015958] font-semibold mb-1">Workspace</label>
             <select
+              aria-label="Filter workspace"
               className="w-full md:w-72 px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-white"
               value={currentWsId ?? ""}
               onChange={(e) => {
                 const v = e.target.value;
                 const num = v === "" ? null : parseInt(v, 10);
-                setCurrentWsId(Number.isFinite(num as any) ? (num as any) : null);
+                setCurrentWsId(Number.isFinite(num) ? num : null);
                 if (typeof window !== "undefined") {
                   if (num == null) sessionStorage.removeItem("current_workspace_id");
                   else sessionStorage.setItem("current_workspace_id", String(num));
                 }
                 // Keep URL in sync with selection
-                const usp = new URLSearchParams(searchParams as any);
-                if (num == null) usp.delete("ws");
-                else usp.set("ws", String(num));
-                router.replace(`?${usp.toString()}`);
+                try {
+                  const currentRaw = typeof window !== 'undefined' ? window.location.search : '';
+                  const usp = new URLSearchParams(currentRaw);
+                  if (num == null) usp.delete("ws");
+                  else usp.set("ws", String(num));
+                  router.replace(`?${usp.toString()}`);
+                } catch {
+                  const usp = new URLSearchParams();
+                  if (num == null) usp.delete("ws");
+                  else usp.set("ws", String(num));
+                  router.replace(`?${usp.toString()}`);
+                }
               }}
             >
               <option value="">All Workspaces</option>

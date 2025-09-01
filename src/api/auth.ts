@@ -1,27 +1,25 @@
 import axios from 'axios';
-import { api } from './client';
 
 export async function login(email: string, password: string) {
   try {
     // Direct login to backend origin to receive/set HttpOnly cookie if backend uses cookie auth
     const origin = process.env.NEXT_PUBLIC_BACKEND_ORIGIN || 'http://localhost:4100';
     const url = `${origin.replace(/\/$/, '')}/api/auth/login`;
-    const { data } = await axios.post(url, { email, password }, {
+    const response = await axios.post(url, { email, password }, {
       withCredentials: true,
       headers: { 'Content-Type': 'application/json' },
     });
-    // No token storage on client; rely on HttpOnly cookie
-    return data?.user ?? null;
-  } catch (err: any) {
-    let msg = 'Login failed';
-    if (err?.isAxiosError && !err.response) {
-      msg = 'Network error: Unable to reach the backend server. Please check if the server is running and accessible.';
-    } else if (err?.response?.data?.message || err?.response?.data?.error) {
-      msg = err.response.data.message || err.response.data.error;
-    } else if (err?.message) {
-      msg = err.message;
+    // Debug: log cookies after login
+    if (typeof window !== 'undefined') {
+      console.log('Login response:', response.data);
+      console.log('Document cookies after login:', document.cookie);
     }
-    throw new Error(msg);
+    // No token storage on client; rely on HttpOnly cookie
+    return response.data?.user ?? null;
+  } catch (err: unknown) {
+    // Narrow error shapes conservatively. Prefer Error instance checks.
+    if (err instanceof Error) throw err;
+    throw new Error('Login failed');
   }
 }
 

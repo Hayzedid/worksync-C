@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Building2, Plus, Folder, Loader2 } from "lucide-react";
+import { Building2, Plus, Loader2 } from "lucide-react";
 import { api } from "../../../api";
 
 type Workspace = { id: number; name: string; description?: string | null };
@@ -31,17 +31,24 @@ export default function WorkspacesPage() {
       setError(null);
       try {
         const data = await api.get("/workspaces");
-        const list: any[] = Array.isArray(data)
-          ? data
-          : Array.isArray((data as any)?.workspaces)
-          ? (data as any).workspaces
+        const list: unknown[] = Array.isArray(data)
+          ? (data as unknown[])
+          : (data && typeof data === 'object' && Array.isArray((data as Record<string, unknown>)['workspaces']))
+          ? ((data as Record<string, unknown>)['workspaces'] as unknown[])
           : [];
         const mapped = list
-          .map((w: any) => ({ id: w?.id ?? w?.workspaceId ?? w?.workspace_id, name: w?.name ?? `Workspace #${w?.id}` , description: w?.description ?? null}))
-          .filter((w: any) => w.id != null);
-        if (mounted) setItems(mapped as Workspace[]);
-      } catch (e: any) {
-        const msg = e?.message || "Failed to load workspaces";
+          .map((w: unknown) => {
+            const ww = w as Record<string, unknown> | null;
+            const id = ww?.id ?? ww?.workspaceId ?? ww?.workspace_id;
+            const name = ww?.name ?? (id != null ? `Workspace #${id}` : undefined);
+            const description = ww?.description ?? null;
+            return { id, name, description };
+          })
+          .filter((w) => (w.id != null));
+        if (mounted) setItems(mapped.map(m => ({ id: Number(m.id), name: String(m.name ?? `Workspace #${m.id}`), description: m.description ?? null })) as Workspace[]);
+      } catch (e: unknown) {
+        const maybeMsg = (e as Record<string, unknown>)?.message;
+        const msg = typeof maybeMsg === 'string' ? maybeMsg : "Failed to load workspaces";
         setError(msg);
       } finally {
         setLoading(false);
@@ -55,21 +62,29 @@ export default function WorkspacesPage() {
   async function handleCreate() {
     if (!newName.trim()) return;
     setCreating(true);
+    setError(null);
     try {
-      const payload: any = { name: newName.trim() };
-      if (newDesc.trim()) payload.description = newDesc.trim();
+      // Clean payload: convert undefined to null for all fields
+      const rawPayload: Record<string, unknown> = { name: newName.trim() };
+      if (newDesc.trim()) rawPayload.description = newDesc.trim();
+      const payload = Object.fromEntries(
+        Object.entries(rawPayload).map(([k, v]) => [k, v === undefined ? null : v])
+      );
       const created = await api.post("/workspaces", payload);
-      const wsId = created?.id ?? created?.workspaceId ?? created?.workspace_id ?? created?.workspace?.id;
+      const wsId = (created as Record<string, unknown>)?.['id'] ?? (created as Record<string, unknown>)?.['workspaceId'] ?? (created as Record<string, unknown>)?.['workspace_id'] ?? ((created as Record<string, unknown>)?.['workspace'] as Record<string, unknown> | undefined)?.['id'];
       // Refresh list
       const data = await api.get("/workspaces");
-      const list: any[] = Array.isArray(data)
-        ? data
-        : Array.isArray((data as any)?.workspaces)
-        ? (data as any).workspaces
+      const list: unknown[] = Array.isArray(data)
+        ? (data as unknown[])
+        : (data && typeof data === 'object' && Array.isArray((data as Record<string, unknown>)['workspaces']))
+        ? ((data as Record<string, unknown>)['workspaces'] as unknown[])
         : [];
       const mapped = list
-        .map((w: any) => ({ id: w?.id ?? w?.workspaceId ?? w?.workspace_id, name: w?.name ?? `Workspace #${w?.id}` , description: w?.description ?? null}))
-        .filter((w: any) => w.id != null) as Workspace[];
+        .map((w: unknown) => {
+          const ww = w as Record<string, unknown> | null;
+          return { id: ww?.['id'] ?? ww?.['workspaceId'] ?? ww?.['workspace_id'], name: ww?.['name'] ?? `Workspace #${ww?.['id']}`, description: ww?.['description'] ?? null };
+        })
+        .filter((w) => w.id != null) as Workspace[];
       setItems(mapped);
       setNewName("");
       setNewDesc("");
@@ -77,8 +92,9 @@ export default function WorkspacesPage() {
         if (typeof window !== "undefined") sessionStorage.setItem("current_workspace_id", String(wsId));
         router.push(`/workspace?ws=${wsId}`);
       }
-    } catch (e: any) {
-      const msg = e?.message || "Failed to create workspace";
+    } catch (e: unknown) {
+      const maybe = (e as Record<string, unknown>)?.message;
+      const msg = typeof maybe === 'string' ? maybe : "Failed to create workspace";
       setError(msg);
     } finally {
       setCreating(false);
@@ -92,6 +108,7 @@ export default function WorkspacesPage() {
       <div className="bg-white rounded-xl border border-[#0CABA8]/30 p-4 mb-6">
         <div className="flex gap-2">
           <input
+            aria-label="Workspace name"
             className="flex-1 px-3 py-2 rounded border border-[#0CABA8]/40 text-[#015958]"
             placeholder="Create a new workspace"
             name="workspace_name"
@@ -101,6 +118,7 @@ export default function WorkspacesPage() {
             onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); }}
           />
           <input
+            aria-label="Workspace description"
             className="flex-1 px-3 py-2 rounded border border-[#0CABA8]/40 text-[#015958]"
             placeholder="Description (optional)"
             name="workspace_description"

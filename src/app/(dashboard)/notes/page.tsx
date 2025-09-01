@@ -1,10 +1,10 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../../api";
-import { FileText, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { useToast } from "../../../components/toast";
 
 type Note = {
@@ -54,66 +54,76 @@ export default function NotesPage() {
     if (effectiveWsId == null) return;
     const current = searchParams.get("ws");
     const currentNum = current ? parseInt(current, 10) : null;
-    if (!Number.isFinite(currentNum as any) || currentNum !== effectiveWsId) {
-      const usp = new URLSearchParams(searchParams as any);
+    if (!(typeof currentNum === 'number' && Number.isFinite(currentNum)) || currentNum !== effectiveWsId) {
+      const usp = new URLSearchParams(searchParams.toString());
       usp.set("ws", String(effectiveWsId));
       router.replace(`?${usp.toString()}`);
     }
   }, [effectiveWsId, searchParams, router]);
 
-  const { data, isLoading, isError, error } = useQuery<any>({
+  const { data, isLoading, isError, error } = useQuery<unknown>({
     queryKey: ["notes", { workspace_id: effectiveWsId }],
     queryFn: () => api.get("/notes", { params: { workspace_id: effectiveWsId } }),
     enabled: effectiveWsId != null,
   });
   // Fetch projects to resolve names when notes only provide projectId (scoped to workspace)
-  const { data: projectsData } = useQuery<any>({
+  const { data: projectsData } = useQuery<unknown>({
     queryKey: ["projects", { workspace_id: effectiveWsId }],
     queryFn: () => api.get("/projects", { params: { workspace_id: effectiveWsId } }),
     enabled: effectiveWsId != null,
   });
   const notes: Note[] = Array.isArray(data)
-    ? data
-    : data?.notes && Array.isArray(data.notes)
-    ? data.notes
+    ? (data as Note[])
+    : (data && typeof data === 'object' && Array.isArray((data as Record<string, unknown>)['notes']))
+    ? ((data as Record<string, unknown>)['notes'] as Note[])
     : [];
 
   // Helpers similar to Tasks page
-  const toPid = (n: any): number | null => {
-    const raw = n?.project?.id ?? n?.projectId ?? n?.project_id ?? n?.projectID;
+  const toPid = (n: unknown): number | null => {
+    const nn = n as Record<string, unknown> | null;
+    if (!nn) return null;
+    const project = nn.project as Record<string, unknown> | undefined;
+    const raw = project?.id ?? nn.projectId ?? nn.project_id ?? nn.projectID;
     const num = typeof raw === 'string' ? parseInt(raw, 10) : raw;
-    return Number.isFinite(num) ? (num as number) : null;
+    return typeof num === 'number' && Number.isFinite(num) ? (num as number) : null;
   };
-  const projectList: any[] = Array.isArray(projectsData)
-    ? projectsData
-    : projectsData?.projects && Array.isArray(projectsData.projects)
-    ? projectsData.projects
+  const projectList: unknown[] = Array.isArray(projectsData)
+    ? (projectsData as unknown[])
+    : (projectsData && typeof projectsData === 'object' && Array.isArray((projectsData as Record<string, unknown>)['projects']))
+    ? ((projectsData as Record<string, unknown>)['projects'] as unknown[])
     : [];
-  const projectNameById: Record<string, string> = projectList.reduce((acc, p: any) => {
-    const id = p?.id ?? p?.projectId ?? p?.project_id;
-    const name = p?.name ?? p?.project_name;
+  const projectNameById: Record<string, string> = projectList.reduce<Record<string, string>>((acc, p: unknown) => {
+    const pp = p as Record<string, unknown>;
+    const id = pp?.id ?? pp?.projectId ?? pp?.project_id;
+    const name = pp?.name ?? pp?.project_name;
     if (id != null && name) acc[String(id)] = String(name);
     return acc;
   }, {} as Record<string, string>);
-  const toPname = (n: any, pid: number | null): string => {
-    if (n?.project?.name) return n.project.name;
-    if (n?.project_name) return n.project_name;
+  const toPname = (n: unknown, pid: number | null): string => {
+    const nn = n as Record<string, unknown> | null;
+    const project = nn?.project as Record<string, unknown> | undefined;
+    if (project && typeof project.name === 'string') return project.name;
+    if (nn && typeof nn.project_name === 'string') return nn.project_name;
     if (pid != null) return projectNameById[String(pid)] ?? `Project #${pid}`;
     return "General";
   };
-  const toWsId = (n: any): number | null => {
-    const raw =
-      n?.project?.workspace?.id ??
-      n?.project?.workspaceId ??
-      n?.project?.workspace_id ??
-      n?.workspace?.id ??
-      n?.workspaceId ??
-      n?.workspace_id;
+  const toWsId = (n: unknown): number | null => {
+    const nn = n as Record<string, unknown> | null;
+    if (!nn) return null;
+    const project = nn.project as Record<string, unknown> | undefined;
+    const workspace = (project?.workspace as Record<string, unknown> | undefined) ?? (nn.workspace as Record<string, unknown> | undefined);
+    const raw = workspace?.id ?? workspace?.workspaceId ?? workspace?.workspace_id;
     const num = typeof raw === 'string' ? parseInt(raw, 10) : raw;
-    return Number.isFinite(num) ? (num as number) : null;
+    return typeof num === 'number' && Number.isFinite(num) ? (num as number) : null;
   };
-  const toWsName = (n: any): string | null => {
-    return n?.project?.workspace?.name || n?.workspace?.name || null;
+  const toWsName = (n: unknown): string | null => {
+    const nn = n as Record<string, unknown> | null;
+    const project = nn?.project as Record<string, unknown> | undefined;
+    const pws = project?.workspace as Record<string, unknown> | undefined;
+    if (pws && typeof pws.name === 'string') return pws.name;
+    const ws = nn?.workspace as Record<string, unknown> | undefined;
+    if (ws && typeof ws.name === 'string') return ws.name;
+    return null;
   };
 
   const generalNotes = notes.filter(n => toPid(n) == null);
@@ -133,9 +143,10 @@ export default function NotesPage() {
       await qc.invalidateQueries({ queryKey: ["notes"] });
       await qc.refetchQueries({ queryKey: ["notes"] });
       addToast({ title: "Note deleted", variant: "success" });
-    } catch (e) {
-      // optionally surface error
-      addToast({ title: "Failed to delete note", variant: "error" });
+    } catch (err: unknown) {
+      const maybe = (err as Record<string, unknown>)?.message;
+      const msg = typeof maybe === 'string' ? maybe : "Failed to delete note";
+      addToast({ title: "Failed to delete note", description: msg, variant: "error" });
     }
   }
 
@@ -151,7 +162,7 @@ export default function NotesPage() {
         )}
         {isLoading && effectiveWsId != null && <div className="text-[#015958]">Loading...</div>}
         {isError && (
-          <div className="text-red-500">Failed to load notes{(error as any)?.message ? `: ${(error as any).message}` : ''}</div>
+          <div className="text-red-500">Failed to load notes{error && (error as { message?: string }).message ? `: ${(error as { message?: string }).message}` : ''}</div>
         )}
 
         {/* General notes grouped (by workspace) */}

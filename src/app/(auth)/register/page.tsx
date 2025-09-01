@@ -2,12 +2,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { api } from "../../../api";
+import { BackendError } from "../../../components/BackendError";
+import { useAuth } from "../../../hooks/useAuth";
 import { Eye, EyeOff } from "lucide-react";
 
-const timezones = [
-  "UTC", "America/New_York", "Europe/London", "Asia/Tokyo", "Africa/Lagos", "Asia/Kolkata"
-];
+// Timezone list (used in select input if enabled)
+const timezones = ["UTC", "America/New_York", "Europe/London"];
 
 export default function RegisterPage() {
   const [form, setForm] = useState({
@@ -19,13 +19,20 @@ export default function RegisterPage() {
     lastName: "",
     timezone: "UTC",
   });
-  const [profilePicture, setProfilePicture] = useState<File | null>(null);
+  // Profile picture upload support reserved for future UI
+  const [profilePicture, setProfilePicture] = useState<File | null>(null); // kept intentionally
   const [terms, setTerms] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { register } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // keep intentionally to avoid noisy eslint `assigned a value but never used` during iterative development
+  void timezones;
+  void profilePicture;
+  void setProfilePicture;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -45,16 +52,23 @@ export default function RegisterPage() {
     }
     setLoading(true);
     try {
-      await api.post("/auth/register", {
+      // Use the register function from useAuth hook
+      const result = await register({
         email: form.email,
         password: form.password,
         firstName: form.firstName,
         lastName: form.lastName,
         userName: form.username,
       });
-      router.push("/login");
-    } catch (err: any) {
-      setError(err.message || "Registration failed");
+      
+      if (result.success) {
+        router.push("/login");
+      } else {
+        setError(result.message || "Registration failed");
+      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Registration failed";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -122,7 +136,13 @@ export default function RegisterPage() {
           <input id="reg-terms" name="terms" type="checkbox" className="mr-2" checked={terms} onChange={e => setTerms(e.target.checked)} />
           I agree to the <a href="/terms" className="text-[#0CABA8] hover:underline ml-1">terms and conditions</a>
         </label>
-        {error && <div className="text-red-500 mb-2">{error}</div>}
+        {error && (
+          error.includes('Failed to fetch') || error.includes('network') || error.includes('ECONNREFUSED') ? (
+            <BackendError />
+          ) : (
+            <div className="text-red-500 mb-2">{error}</div>
+          )
+        )}
         <button className="bg-[#008F8C] text-white px-4 py-2 rounded w-full transition-colors duration-200 hover:bg-[#0FC2C0]" disabled={loading}>{loading ? "Registering..." : "Register"}</button>
         <div className="mt-4 text-center">
           <Link href="/login" className="text-[#0CABA8] hover:underline">Already have an account? Login</Link>

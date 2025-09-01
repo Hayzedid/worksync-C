@@ -4,9 +4,10 @@ import { useRouter } from 'next/navigation';
 
 import { Bell, User, LogOut } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSocket } from './SocketProvider';
-import { NotificationList, Notification as NotificationType } from './notifications/NotificationList';
+import { NotificationList } from './notifications/NotificationList';
+import { useNotifications } from './notifications/NotificationProvider';
 
 export default function Topbar() {
   const { user } = useAuth() || {};
@@ -14,30 +15,7 @@ export default function Topbar() {
   const [showNotif, setShowNotif] = useState(false);
   const notifRef = useRef<HTMLDivElement | null>(null);
   const socket = useSocket();
-  const [notifications, setNotifications] = useState<NotificationType[]>([]);
-
-  // Add notification to state
-  const addNotification = useCallback((notif: Omit<NotificationType, 'id' | 'read' | 'createdAt'> & { id?: number; createdAt?: string }) => {
-    setNotifications(prev => [
-      {
-        id: notif.id ?? Date.now(),
-        message: notif.message,
-        read: false,
-        createdAt: notif.createdAt ?? new Date().toISOString(),
-      },
-      ...prev
-    ]);
-  }, []);
-
-  // Mark notification as read
-  const markRead = useCallback((id: number) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-  }, []);
-
-  // Delete notification
-  const deleteNotif = useCallback((id: number) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-  }, []);
+  const { notifications, addNotification, markRead, deleteNotif } = useNotifications();
 
   // Listen for real-time notifications from socket
   useEffect(() => {

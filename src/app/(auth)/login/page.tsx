@@ -2,31 +2,59 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { api } from "../../../api";
-import { login as loginRequest } from "../../../api/auth";
-
+import { useAuth } from "../../../hooks/useAuth";
+import { BackendError } from "../../../components/BackendError";
 import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
   const [form, setForm] = useState({ email: "", password: "" });
-  const [error, setError] = useState("");
+  const [error, setError] = useState<Error | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
+  const auth = useAuth();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError("");
+    setError(null);
     setLoading(true);
+    
+    // Clean data - convert undefined to null
+    const cleanData = {
+      email: form.email || null,
+      password: form.password || null,
+    };
+
+    if (!cleanData.email || !cleanData.password) {
+      setError(new Error('Email and password are required'));
+      setLoading(false);
+      return;
+    }
+
     try {
-      await loginRequest(form.email, form.password);
-      router.replace("/dashboard");
-    } catch (err: any) {
-      setError(err.message || "Login failed");
+      const result = await auth.login(cleanData.email, cleanData.password);
+      if (result.success) {
+        router.replace("/dashboard");
+      } else {
+        // Create a specific error based on the message to trigger proper error component
+        const errorMessage = result.message || "Login failed";
+        setError(new Error(errorMessage));
+      }
+    } catch (err: unknown) {
+      // This catch should rarely be reached now, as useAuth handles most errors
+      if (err instanceof Error) {
+        setError(err);
+      } else {
+        setError(new Error("An unexpected error occurred. Please try again."));
+      }
     } finally {
       setLoading(false);
     }
   }
+
+  const handleRetry = () => {
+    setError(null);
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0FC2C0] via-[#0CABA8] to-[#023535]">
@@ -56,11 +84,15 @@ export default function LoginPage() {
             {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
           </button>
         </div>
-        {error && <div className="text-red-500 mb-2">{error}</div>}
+        {error && (
+          <div className="mb-4">
+            <BackendError error={error} retry={handleRetry} />
+          </div>
+        )}
         <button className="bg-[#0FC2C0] text-white px-4 py-2 rounded w-full transition-colors duration-200 hover:bg-[#0CABA8]" disabled={loading}>{loading ? "Logging in..." : "Login"}</button>
         <div className="mt-4 flex items-center justify-between text-sm">
           <Link href="/forgot-password" className="text-[#0CABA8] hover:underline">Forgot password?</Link>
-          <Link href="/register" className="text-[#0CABA8] hover:underline">Don't have an account? Register</Link>
+          <Link href="/register" className="text-[#0CABA8] hover:underline">Do not have an account? Register</Link>
         </div>
       </form>
     </div>

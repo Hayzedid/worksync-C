@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../../../api";
 import { Folder, PlusCircle, FileText, Trash2 } from "lucide-react";
@@ -15,40 +14,39 @@ import { useToast } from "../../../../components/toast";
   const { id } = use(params);
   const projectId = id;
   const qc = useQueryClient();
-  const router = useRouter();
   const { addToast } = useToast();
 
-  const { data, isLoading, isError, refetch } = useQuery<any>({
+  const { data, isLoading, isError } = useQuery<unknown>({
     queryKey: ["project", projectId],
     queryFn: () => api.get(`/projects/${projectId}`),
   });
 
-  const project: Project | null = data?.project || (data && !Array.isArray(data) ? data : null);
+  const project: Project | null = (data as Record<string, unknown>)?.['project'] as Project || (data && !Array.isArray(data) ? data as Project : null);
 
   // Fallback queries for project-scoped tasks and notes if backend doesn't embed them
-  const { data: tasksData } = useQuery<any>({
+  const { data: tasksData } = useQuery<unknown>({
     queryKey: ["projectTasks", projectId],
     queryFn: () => api.get(`/projects/${projectId}/tasks`),
     // still fetch; inexpensive and ensures resilience to varying API shapes
   });
-  const { data: notesData } = useQuery<any>({
+  const { data: notesData } = useQuery<unknown>({
     queryKey: ["projectNotes", projectId],
     queryFn: () => api.get(`/projects/${projectId}/notes`),
   });
 
-  const embeddedTasks: Task[] = Array.isArray(data?.tasks)
-    ? data.tasks
+  const embeddedTasks: Task[] = Array.isArray((data as Record<string, unknown>)?.['tasks'])
+    ? (data as Record<string, unknown>)['tasks'] as Task[]
     : Array.isArray(project?.tasks)
     ? (project!.tasks as Task[])
     : [];
-  const embeddedNotes: Note[] = Array.isArray(data?.notes)
-    ? data.notes
+  const embeddedNotes: Note[] = Array.isArray((data as Record<string, unknown>)?.['notes'])
+    ? (data as Record<string, unknown>)['notes'] as Note[]
     : Array.isArray(project?.notes)
     ? (project!.notes as Note[])
     : [];
 
-  const fallbackTasks: Task[] = Array.isArray(tasksData) ? tasksData : tasksData?.tasks ?? [];
-  const fallbackNotes: Note[] = Array.isArray(notesData) ? notesData : notesData?.notes ?? [];
+  const fallbackTasks: Task[] = Array.isArray(tasksData) ? tasksData as Task[] : (tasksData as Record<string, unknown>)?.['tasks'] as Task[] ?? [];
+  const fallbackNotes: Note[] = Array.isArray(notesData) ? notesData as Note[] : (notesData as Record<string, unknown>)?.['notes'] as Note[] ?? [];
 
   const viewTasks: Task[] = embeddedTasks.length ? embeddedTasks : fallbackTasks;
   const viewNotes: Note[] = embeddedNotes.length ? embeddedNotes : fallbackNotes;
@@ -77,7 +75,7 @@ import { useToast } from "../../../../components/toast";
       await qc.refetchQueries({ queryKey: ["project", projectId] });
       qc.invalidateQueries({ queryKey: ["tasks"] });
       addToast({ title: "Task deleted", variant: "success" });
-    } catch (err) {
+    } catch {
       addToast({ title: "Failed to delete task", variant: "error" });
     }
   }
@@ -89,7 +87,7 @@ import { useToast } from "../../../../components/toast";
       await qc.refetchQueries({ queryKey: ["project", projectId] });
       qc.invalidateQueries({ queryKey: ["notes"] });
       addToast({ title: "Note deleted", variant: "success" });
-    } catch (err) {
+    } catch {
       addToast({ title: "Failed to delete note", variant: "error" });
     }
   }
@@ -107,9 +105,11 @@ import { useToast } from "../../../../components/toast";
       setStatusSuccess("Status updated");
       addToast({ title: "Project updated", description: `Status set to ${projStatus}`, variant: "success" });
       setTimeout(() => setStatusSuccess(""), 1500);
-    } catch (err: any) {
-      setStatusError(err?.message || "Failed to update status");
-      addToast({ title: "Failed to update status", description: err?.message || "", variant: "error" });
+    } catch (err: unknown) {
+      const maybe = (err as Record<string, unknown>)?.message;
+      const msg = typeof maybe === 'string' ? maybe : "Failed to update status";
+      setStatusError(msg);
+      addToast({ title: "Failed to update status", description: typeof maybe === 'string' ? maybe : "", variant: "error" });
     } finally {
       setUpdatingStatus(false);
     }
@@ -128,9 +128,11 @@ import { useToast } from "../../../../components/toast";
       qc.invalidateQueries({ queryKey: ["projects"] });
       qc.invalidateQueries({ queryKey: ["tasks"] });
       addToast({ title: "Task created", description: title, variant: "success" });
-    } catch (err: any) {
-      setError(err.message || "Failed to create task");
-      addToast({ title: "Failed to create task", description: err?.message || "", variant: "error" });
+    } catch (err: unknown) {
+      const maybe = (err as Record<string, unknown>)?.message;
+      const msg = typeof maybe === 'string' ? maybe : "Failed to create task";
+      setError(msg);
+      addToast({ title: "Failed to create task", description: typeof maybe === 'string' ? maybe : "", variant: "error" });
     } finally {
       setSubmitting(false);
     }
@@ -154,9 +156,11 @@ import { useToast } from "../../../../components/toast";
       qc.invalidateQueries({ queryKey: ["projects"] });
       qc.invalidateQueries({ queryKey: ["notes"] });
       addToast({ title: "Note created", description: noteTitle, variant: "success" });
-    } catch (err: any) {
-      setNoteError(err.message || "Failed to create note");
-      addToast({ title: "Failed to create note", description: err?.message || "", variant: "error" });
+    } catch (err: unknown) {
+      const maybe = (err as Record<string, unknown>)?.message;
+      const msg = typeof maybe === 'string' ? maybe : "Failed to create note";
+      setNoteError(msg);
+      addToast({ title: "Failed to create note", description: typeof maybe === 'string' ? maybe : "", variant: "error" });
     } finally {
       setNoteSubmitting(false);
     }
@@ -186,6 +190,7 @@ import { useToast } from "../../../../components/toast";
             <div>
               <label className="block text-[#015958] font-semibold mb-1">Project status</label>
               <select
+                aria-label="Project status"
                 value={projStatus}
                 onChange={(e) => setProjStatus(e.target.value.toLowerCase())}
                 className="px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]"
@@ -255,6 +260,7 @@ import { useToast } from "../../../../components/toast";
                 <div>
                   <label className="block text-[#015958] font-semibold mb-1">Status</label>
                   <select
+                    aria-label="New task status"
                     value={status}
                     onChange={(e) => setStatus(e.target.value)}
                     className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]"

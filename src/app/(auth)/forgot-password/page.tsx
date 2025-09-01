@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+// import { useRouter } from "next/navigation";
 import { api } from "../../../api";
 
 export default function ForgotPasswordPage() {
@@ -9,7 +9,8 @@ export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const router = useRouter();
+  // router not used here, keep for future navigation if needed
+  // const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -19,8 +20,9 @@ export default function ForgotPasswordPage() {
     try {
       await api.post("/auth/forgot-password", { email });
       setSuccess("If an account exists for that email, a reset link has been sent.");
-    } catch (err: any) {
-      setError(err?.message || "Failed to request password reset");
+    } catch (err: unknown) {
+      if (err instanceof Error) setError(err.message);
+      else setError(String(err) || "Failed to request password reset");
     } finally {
       setLoading(false);
     }
@@ -30,7 +32,7 @@ export default function ForgotPasswordPage() {
     <div className="min-h-screen bg-[#F6FFFE] p-8 flex items-center justify-center">
       <div className="w-full max-w-md bg-white rounded-xl shadow p-6 border border-[#0CABA8]/20">
         <h1 className="text-2xl font-bold text-[#0FC2C0] mb-4">Forgot Password</h1>
-        <p className="text-sm text-[#015958] mb-6">Enter your email address and we'll send you a link to reset your password.</p>
+  <p className="text-sm text-[#015958] mb-6">Enter your email address and we will send you a link to reset your password.</p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-[#015958] font-semibold mb-1">Email</label>

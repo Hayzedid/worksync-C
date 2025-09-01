@@ -4,15 +4,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../../api";
 import { FolderPlus, Folder, Trash2 } from "lucide-react";
 import { useToast } from "../../../components/toast";
-import { useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-
-type Project = { id: number; name: string; status: string };
+import React, { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 export default function ProjectsPage() {
   const qc = useQueryClient();
   const { addToast } = useToast();
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   // Determine current workspace context from URL or sessionStorage
@@ -41,29 +38,48 @@ export default function ProjectsPage() {
   const effectiveWsId = wsIdFromUrl ?? currentWsId;
 
   // Fetch all projects (server may include workspace association fields)
-  const { data, isLoading, isError } = useQuery<any>({
+  const { data, isLoading, isError } = useQuery<unknown>({
     queryKey: ["projects"],
     queryFn: () => api.get("/projects"),
   });
-  const projects: any[] = Array.isArray(data)
-    ? data
-    : data?.projects && Array.isArray(data.projects)
-    ? data.projects
+  const projects: unknown[] = Array.isArray(data)
+    ? (data as unknown[])
+    : (data && typeof data === 'object' && Array.isArray((data as Record<string, unknown>)['projects']))
+    ? ((data as Record<string, unknown>)['projects'] as unknown[])
     : [];
 
   // Helpers to read workspace info from various shapes
-  const toWsId = (p: any): number | null => {
-    const raw = p?.workspace?.id ?? p?.workspaceId ?? p?.workspace_id ?? p?.ws_id;
+  const toWsId = (p: unknown): number | null => {
+    const pp = p as Record<string, unknown> | null;
+    if (!pp) return null;
+    const ws = pp.workspace as Record<string, unknown> | undefined;
+    const raw = ws?.id ?? pp.workspaceId ?? pp.workspace_id ?? pp.ws_id;
     const num = typeof raw === 'string' ? parseInt(raw, 10) : raw;
-    return Number.isFinite(num) ? (num as number) : null;
+    return typeof num === 'number' && Number.isFinite(num) ? (num as number) : null;
   };
-  const toWsName = (p: any): string | null => {
-    return p?.workspace?.name ?? p?.workspace_name ?? null;
+  const toWsName = (p: unknown): string | null => {
+    const pp = p as Record<string, unknown> | null;
+    if (!pp) return null;
+    const ws = pp.workspace as Record<string, unknown> | undefined;
+    if (ws && typeof ws.name === 'string') return ws.name;
+    if (typeof pp.workspace_name === 'string') return pp.workspace_name;
+    return null;
   };
 
-  // Grouping
-  const inCurrentWorkspace = projects.filter(p => effectiveWsId != null && toWsId(p) === effectiveWsId);
-  const generalProjects = projects.filter(p => toWsId(p) == null);
+  // Grouping and sorting
+  function isArchived(p: unknown): boolean {
+    const pp = p as Record<string, unknown>;
+    return (pp.status?.toString().toLowerCase() === 'archived');
+  }
+  // Sort: non-archived first, then archived
+  function sortArchivedLast(arr: unknown[]) {
+    return [
+      ...arr.filter(p => !isArchived(p)),
+      ...arr.filter(p => isArchived(p)),
+    ];
+  }
+  const inCurrentWorkspace = sortArchivedLast(projects.filter(p => effectiveWsId != null && toWsId(p) === effectiveWsId) as unknown[]);
+  const generalProjects = sortArchivedLast(projects.filter(p => toWsId(p) == null) as unknown[]);
   const workspaceName: string | null = (() => {
     for (const p of inCurrentWorkspace) {
       const n = toWsName(p);
@@ -72,15 +88,31 @@ export default function ProjectsPage() {
     return null;
   })();
 
-  async function handleDeleteProject(id: number) {
+  async function handleDeleteProject(id: number | undefined | null) {
+    if (id === undefined || id === null || Number.isNaN(id)) {
+      addToast({ title: "Failed to delete project", description: "Invalid project ID", variant: "error" });
+      return;
+    }
+    
+    if (!confirm('Are you sure you want to delete this project?')) {
+      return;
+    }
+    
     try {
-      await api.delete(`/projects/${id}`);
-      await qc.invalidateQueries({ queryKey: ["projects"] });
-      await qc.refetchQueries({ queryKey: ["projects"] });
-      addToast({ title: "Project deleted", variant: "success" });
-    } catch (e) {
-      // optionally surface error
-      addToast({ title: "Failed to delete project", variant: "error" });
+      const response = await api.delete(`/projects/${id}`);
+      const data = response as any;
+      
+      if (data.success !== false) { // Assume success if no explicit failure
+        await qc.invalidateQueries({ queryKey: ["projects"] });
+        await qc.refetchQueries({ queryKey: ["projects"] });
+        addToast({ title: "Project deleted", variant: "success" });
+      } else {
+        throw new Error(data.message || 'Delete failed');
+      }
+    } catch (err: unknown) {
+      const maybe = (err as Record<string, unknown>)?.message;
+      const msg = typeof maybe === 'string' ? maybe : "Failed to delete project";
+      addToast({ title: "Failed to delete project", description: msg, variant: "error" });
     }
   }
 
@@ -98,20 +130,21 @@ export default function ProjectsPage() {
         <div className="mb-8">
           <h2 className="text-xl font-bold text-[#0FC2C0] mb-3">General projects</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {generalProjects.map(p => {
-              const href = `/projects/${p.id}`;
+              {generalProjects.map(p => {
+              const pp = p as Record<string, unknown>;
+              const href = `/projects/${String(pp.id)}`;
               return (
-                <div key={p.id} className="bg-white rounded-xl shadow p-6 border border-[#0CABA8]/20 hover:shadow-md transition-shadow">
+                <div key={String(pp.id)} className="bg-white rounded-xl shadow p-6 border border-[#0CABA8]/20 hover:shadow-md transition-shadow">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-center gap-4">
                       <Folder className="h-8 w-8 text-[#0FC2C0]" />
                       <div>
-                        <Link href={href} className="text-lg font-bold text-[#0FC2C0] hover:underline">{p.name}</Link>
-                        <div className="text-xs text-[#0CABA8]">{p.status}</div>
+                        <Link href={href} className="text-lg font-bold text-[#0FC2C0] hover:underline">{String(pp.name ?? `Project #${pp.id}`)}</Link>
+                        <div className="text-xs text-[#0CABA8]">{String(pp.status ?? '')}</div>
                       </div>
                     </div>
                     <button
-                      onClick={() => handleDeleteProject(p.id)}
+                      onClick={() => handleDeleteProject(pp.id as number | undefined | null)}
                       className="text-red-600 hover:text-red-700"
                       type="button"
                       aria-label="Delete project"
@@ -150,19 +183,20 @@ export default function ProjectsPage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {inCurrentWorkspace.map(p => {
-              const href = effectiveWsId != null ? `/projects/${p.id}?ws=${effectiveWsId}` : `/projects/${p.id}`;
+              const pp = p as Record<string, unknown>;
+              const href = effectiveWsId != null ? `/projects/${String(pp.id)}?ws=${effectiveWsId}` : `/projects/${String(pp.id)}`;
               return (
-                <div key={p.id} className="bg-white rounded-xl shadow p-6 border border-[#0CABA8]/20 hover:shadow-md transition-shadow">
+                <div key={String(pp.id)} className="bg-white rounded-xl shadow p-6 border border-[#0CABA8]/20 hover:shadow-md transition-shadow">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-center gap-4">
                       <Folder className="h-8 w-8 text-[#0FC2C0]" />
                       <div>
-                        <Link href={href} className="text-lg font-bold text-[#0FC2C0] hover:underline">{p.name}</Link>
-                        <div className="text-xs text-[#0CABA8]">{p.status}</div>
+                        <Link href={href} className="text-lg font-bold text-[#0FC2C0] hover:underline">{String(pp.name ?? `Project #${pp.id}`)}</Link>
+                        <div className="text-xs text-[#0CABA8]">{String(pp.status ?? '')}</div>
                       </div>
                     </div>
                     <button
-                      onClick={() => handleDeleteProject(p.id)}
+                      onClick={() => handleDeleteProject(Number(pp.id))}
                       className="text-red-600 hover:text-red-700"
                       type="button"
                       aria-label="Delete project"

@@ -2,10 +2,17 @@
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../../api";
-import { CheckSquare, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, MessageCircle, Users } from "lucide-react";
 import { useToast } from "../../../components/toast";
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { useAuth } from "../../../hooks/useAuth";
+import { 
+  ItemPresenceIndicator,
+  UniversalComments,
+  RealtimeReactions
+} from "../../../components/collaboration";
+import { useGlobalPresence } from "../../../hooks/collaboration/useGlobalPresence";
 
 type Task = {
   id: number;
@@ -17,12 +24,29 @@ type Task = {
   workspace?: { id: number; name: string };
 };
 
+function resolveField(obj: unknown, ...keys: string[]) {
+  const o = obj as Record<string, unknown> | null;
+  if (!o) return undefined;
+  for (const k of keys) {
+    if (k in o) return o[k];
+  }
+  return undefined;
+}
+
 export default function TasksPage() {
   const qc = useQueryClient();
   const { addToast } = useToast();
+  const auth = useAuth();
   const searchParams = useSearchParams();
-  const router = useRouter();
   const wsParam = searchParams.get("ws");
+  const [expandedComments, setExpandedComments] = useState<Set<number>>(new Set());
+  
+  // Initialize presence tracking for tasks page
+  const { presence, setActivityStatus } = useGlobalPresence(
+    auth?.user?.id?.toString() || '',
+    auth?.user?.name || 'Guest',
+    'tasks'
+  );
   const wsIdFromUrl = (() => {
     if (!wsParam) return null;
     const n = parseInt(wsParam, 10);
@@ -45,43 +69,48 @@ export default function TasksPage() {
     }
   }, [wsIdFromUrl]);
   const effectiveWsId = wsIdFromUrl ?? currentWsId;
-  const { data, isLoading, isError, error } = useQuery<any>({
+  const { data, isLoading, isError, error } = useQuery<unknown>({
     queryKey: ["tasks"],
     queryFn: () => api.get("/tasks"),
   });
   // Also fetch projects to resolve names when tasks only provide projectId
-  const { data: projectsData } = useQuery<any>({
+  const { data: projectsData } = useQuery<unknown>({
     queryKey: ["projects"],
     queryFn: () => api.get("/projects"),
   });
   const tasks: Task[] = Array.isArray(data)
-    ? data
-    : data?.tasks && Array.isArray(data.tasks)
-    ? data.tasks
+    ? (data as Task[])
+    : (data && typeof data === 'object' && Array.isArray((data as Record<string, unknown>)['tasks']))
+    ? ((data as Record<string, unknown>)['tasks'] as Task[])
     : [];
 
   // Helpers to robustly detect project association regardless of API shape
-  const toPid = (t: any): number | null => {
-    const raw = t?.project?.id ?? t?.projectId ?? t?.project_id ?? t?.projectID;
+  const toPid = (t: unknown): number | null => {
+    const tt = t as Record<string, unknown> | null;
+    if (!tt) return null;
+    const project = tt.project as Record<string, unknown> | undefined;
+    const raw = project?.id ?? tt.projectId ?? tt.project_id ?? tt.projectID;
     const n = typeof raw === 'string' ? parseInt(raw, 10) : raw;
-    return Number.isFinite(n) ? (n as number) : null;
+    return typeof n === 'number' && Number.isFinite(n) ? (n as number) : null;
   };
   // Build a lookup for project names from projectsData
-  const projectList: any[] = Array.isArray(projectsData)
-    ? projectsData
-    : projectsData?.projects && Array.isArray(projectsData.projects)
-    ? projectsData.projects
+  const projectList: unknown[] = Array.isArray(projectsData)
+    ? (projectsData as unknown[])
+    : (projectsData && typeof projectsData === 'object' && Array.isArray((projectsData as Record<string, unknown>)['projects']))
+    ? ((projectsData as Record<string, unknown>)['projects'] as unknown[])
     : [];
-  const projectNameById: Record<string, string> = projectList.reduce((acc, p: any) => {
-    const id = p?.id ?? p?.projectId ?? p?.project_id;
-    const name = p?.name ?? p?.project_name;
+  const projectNameById: Record<string, string> = projectList.reduce<Record<string, string>>((acc, p: unknown) => {
+    const pp = p as Record<string, unknown> | null;
+    const id = pp?.['id'] ?? pp?.['projectId'] ?? pp?.['project_id'];
+    const name = pp?.['name'] ?? pp?.['project_name'];
     if (id != null && name) acc[String(id)] = String(name);
     return acc;
-  }, {} as Record<string, string>);
+  }, {});
 
-  const toPname = (t: any, pid: number | null): string => {
-    if (t?.project?.name) return t.project.name;
-    if (t?.project_name) return t.project_name;
+  const toPname = (t: unknown, pid: number | null): string => {
+    const tt = t as Record<string, unknown> | null;
+    if (tt?.project && typeof (tt.project as Record<string, unknown>)?.name === 'string') return (tt.project as Record<string, unknown>).name as string;
+    if (tt && typeof tt.project_name === 'string') return tt.project_name;
     if (pid != null) {
       const fromMap = projectNameById[String(pid)];
       if (fromMap) return fromMap;
@@ -91,23 +120,21 @@ export default function TasksPage() {
   };
 
   // Helpers for workspace association (direct or via project)
-  const toWsId = (t: any): number | null => {
-    const raw =
-      t?.project?.workspace?.id ??
-      t?.project?.workspaceId ??
-      t?.project?.workspace_id ??
-      t?.workspace?.id ??
-      t?.workspaceId ??
-      t?.workspace_id;
+  const toWsId = (t: unknown): number | null => {
+    const tt = t as Record<string, unknown> | null;
+    if (!tt) return null;
+  const project = tt.project as Record<string, unknown> | undefined;
+  const workspace = (project?.workspace as Record<string, unknown> | undefined) ?? (tt.workspace as Record<string, unknown> | undefined);
+  const raw = resolveField(workspace, 'id') ?? resolveField(project, 'workspaceId') ?? resolveField(project, 'workspace_id') ?? resolveField(tt.workspace, 'id') ?? resolveField(tt, 'workspaceId') ?? resolveField(tt, 'workspace_id');
     const n = typeof raw === 'string' ? parseInt(raw, 10) : raw;
-    return Number.isFinite(n) ? (n as number) : null;
+    return typeof n === 'number' && Number.isFinite(n) ? (n as number) : null;
   };
-  const toWsName = (t: any): string | null => {
-    return (
-      t?.project?.workspace?.name ||
-      t?.workspace?.name ||
-      null
-    );
+  const toWsName = (t: unknown): string | null => {
+    const tt = t as Record<string, unknown> | null;
+    const project = tt?.project as Record<string, unknown> | undefined;
+    const workspace = project?.workspace as Record<string, unknown> | undefined ?? tt?.workspace as Record<string, unknown> | undefined;
+    if (workspace && typeof workspace.name === 'string') return workspace.name;
+    return null;
   };
 
   const generalTasks = tasks.filter(t => toPid(t) == null);
@@ -127,9 +154,10 @@ export default function TasksPage() {
       await qc.invalidateQueries({ queryKey: ["tasks"] });
       await qc.refetchQueries({ queryKey: ["tasks"] });
       addToast({ title: "Task deleted", variant: "success" });
-    } catch (e) {
-      // optionally surface error
-      addToast({ title: "Failed to delete task", variant: "error" });
+    } catch (err: unknown) {
+      const maybe = (err as Record<string, unknown>)?.message;
+      const msg = typeof maybe === 'string' ? maybe : "Failed to delete task";
+      addToast({ title: "Failed to delete task", description: msg, variant: "error" });
     }
   }
 
@@ -143,7 +171,7 @@ export default function TasksPage() {
         {isLoading && <div className="text-[#015958]">Loading...</div>}
         {isError && (
           <div className="text-red-500">
-            Failed to load tasks{(error as any)?.message ? `: ${(error as any).message}` : ''}
+            Failed to load tasks{(error && typeof (error as unknown as Record<string, unknown>)['message'] === 'string') ? `: ${String((error as unknown as Record<string, unknown>)['message'])}` : ''}
           </div>
         )}
         {/* General tasks grouped (by workspace) */}
@@ -171,21 +199,80 @@ export default function TasksPage() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {group.items.map(t => (
-                      <div key={t.id} className="border border-[#0CABA8]/20 rounded-md p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <div className="text-[#015958] font-medium">{t.title}</div>
-                            <div className="text-xs text-[#0CABA8] mt-1">{t.status}</div>
+                      <div key={t.id} className="border border-[#0CABA8]/20 rounded-md p-4 relative">
+                        {/* Realtime Reactions Overlay */}
+                        <RealtimeReactions
+                          itemType="task"
+                          itemId={t.id.toString()}
+                          currentUserId={auth?.user?.id?.toString() || ''}
+                          currentUserName={auth?.user?.name || 'Guest'}
+                          className="absolute inset-0 rounded-md"
+                        />
+                        
+                        <div className="relative z-10">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1">
+                              <div 
+                                className="text-[#015958] font-medium cursor-pointer hover:text-[#0FC2C0]"
+                                onClick={() => setActivityStatus('task', t.id.toString(), 'viewing')}
+                              >
+                                {t.title}
+                              </div>
+                              <div className="text-xs text-[#0CABA8] mt-1">{t.status}</div>
+                              
+                              {/* Presence Indicator */}
+                              <div className="mt-2">
+                                <ItemPresenceIndicator
+                                  users={presence.users}
+                                  currentUserId={auth?.user?.id?.toString() || ''}
+                                  itemType="task"
+                                  itemId={t.id.toString()}
+                                  className="mb-2"
+                                />
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => {
+                                  const newExpanded = new Set(expandedComments);
+                                  if (newExpanded.has(t.id)) {
+                                    newExpanded.delete(t.id);
+                                  } else {
+                                    newExpanded.add(t.id);
+                                  }
+                                  setExpandedComments(newExpanded);
+                                }}
+                                className="text-[#0FC2C0] hover:text-[#0CABA8]"
+                                title="Toggle comments"
+                              >
+                                <MessageCircle className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteTask(t.id)}
+                                className="text-red-600 hover:text-red-700"
+                                type="button"
+                                aria-label="Delete task"
+                                title="Delete task"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
                           </div>
-                          <button
-                            onClick={() => handleDeleteTask(t.id)}
-                            className="text-red-600 hover:text-red-700"
-                            type="button"
-                            aria-label="Delete task"
-                            title="Delete task"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          
+                          {/* Expanded Comments */}
+                          {expandedComments.has(t.id) && auth?.user && (
+                            <div className="mt-4 border-t border-[#0CABA8]/20 pt-4">
+                              <UniversalComments
+                                itemType="task"
+                                itemId={t.id.toString()}
+                                currentUserId={auth.user.id.toString()}
+                                currentUserName={auth.user.name || 'User'}
+                                users={presence.users}
+                                className="max-h-60 overflow-y-auto"
+                              />
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -232,28 +319,88 @@ export default function TasksPage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {group.items.map(t => (
-                  <div key={t.id} className="border border-[#0CABA8]/20 rounded-md p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="text-[#015958] font-medium">{t.title}</div>
-                        <div className="text-xs text-[#0CABA8] mt-1">{t.status}</div>
-                        {(toWsName(t) || toWsId(t) != null) && (
-                          <div className="mt-2">
-                            <span className="inline-block text-[10px] bg-[#F6FFFE] border border-[#0CABA8]/40 text-[#015958] px-2 py-0.5 rounded">
-                              Workspace: {toWsName(t) ?? `#${toWsId(t)}`}
-                            </span>
+                  <div key={t.id} className="border border-[#0CABA8]/20 rounded-md p-4 relative">
+                    {/* Realtime Reactions Overlay */}
+                    <RealtimeReactions
+                      itemType="task"
+                      itemId={t.id.toString()}
+                      currentUserId={auth?.user?.id?.toString() || ''}
+                      currentUserName={auth?.user?.name || 'Guest'}
+                      className="absolute inset-0 rounded-md"
+                    />
+                    
+                    <div className="relative z-10">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <div 
+                            className="text-[#015958] font-medium cursor-pointer hover:text-[#0FC2C0]"
+                            onClick={() => setActivityStatus('task', t.id.toString(), 'viewing')}
+                          >
+                            {t.title}
                           </div>
-                        )}
+                          <div className="text-xs text-[#0CABA8] mt-1">{t.status}</div>
+                          
+                          {/* Presence Indicator */}
+                          <div className="mt-2">
+                            <ItemPresenceIndicator
+                              users={presence.users}
+                              currentUserId={auth?.user?.id?.toString() || ''}
+                              itemType="task"
+                              itemId={t.id.toString()}
+                              className="mb-2"
+                            />
+                          </div>
+                          
+                          {(toWsName(t) || toWsId(t) != null) && (
+                            <div className="mt-2">
+                              <span className="inline-block text-[10px] bg-[#F6FFFE] border border-[#0CABA8]/40 text-[#015958] px-2 py-0.5 rounded">
+                                Workspace: {toWsName(t) ?? `#${toWsId(t)}`}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              const newExpanded = new Set(expandedComments);
+                              if (newExpanded.has(t.id)) {
+                                newExpanded.delete(t.id);
+                              } else {
+                                newExpanded.add(t.id);
+                              }
+                              setExpandedComments(newExpanded);
+                            }}
+                            className="text-[#0FC2C0] hover:text-[#0CABA8]"
+                            title="Toggle comments"
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteTask(t.id)}
+                            className="text-red-600 hover:text-red-700"
+                            type="button"
+                            aria-label="Delete task"
+                            title="Delete task"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </div>
-                      <button
-                        onClick={() => handleDeleteTask(t.id)}
-                        className="text-red-600 hover:text-red-700"
-                        type="button"
-                        aria-label="Delete task"
-                        title="Delete task"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      
+                      {/* Expanded Comments */}
+                      {expandedComments.has(t.id) && auth?.user && (
+                        <div className="mt-4 border-t border-[#0CABA8]/20 pt-4">
+                          <UniversalComments
+                            itemType="task"
+                            itemId={t.id.toString()}
+                            currentUserId={auth.user.id.toString()}
+                            currentUserName={auth.user.name || 'User'}
+                            users={presence.users}
+                            className="max-h-60 overflow-y-auto"
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

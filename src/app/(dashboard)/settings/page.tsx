@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Button } from '../../../components/Button';
-import { Settings, User, Bell, Building2 } from 'lucide-react';
+import { User, Bell, Building2 } from 'lucide-react';
 
 const tabs = [
   { name: "Profile", icon: User },
@@ -32,12 +32,12 @@ export default function SettingsPage() {
           {activeTab === "Profile" && (
             <div className="flex flex-col gap-4">
               <div>
-                <label className="block text-[#015958] font-semibold mb-1">Name</label>
-                <input className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" value="Demo User" readOnly />
+                <label htmlFor="profile-name" className="block text-[#015958] font-semibold mb-1">Name</label>
+                <input id="profile-name" title="Profile name" placeholder="Demo User" className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" value="Demo User" readOnly />
               </div>
               <div>
-                <label className="block text-[#015958] font-semibold mb-1">Email</label>
-                <input className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" value="demo@worksync.com" readOnly />
+                <label htmlFor="profile-email" className="block text-[#015958] font-semibold mb-1">Email</label>
+                <input id="profile-email" title="Profile email" placeholder="demo@worksync.com" className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" value="demo@worksync.com" readOnly />
               </div>
               <Link href="/forgot-password" className="bg-[#0FC2C0] text-white px-6 py-3 rounded-lg font-semibold hover:bg-[#0CABA8] text-center">Change Password</Link>
             </div>
@@ -58,13 +58,13 @@ export default function SettingsPage() {
           {activeTab === "Workspace" && (
             <div className="flex flex-col gap-6">
               <div>
-                <label className="block text-[#015958] font-semibold mb-1">Workspace Name</label>
-                <input className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" value="Acme Corp" readOnly />
+                <label htmlFor="workspace-name" className="block text-[#015958] font-semibold mb-1">Workspace Name</label>
+                <input id="workspace-name" title="Workspace name" placeholder="Acme Corp" className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" value="Acme Corp" readOnly />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[#015958] font-semibold mb-1">Theme</label>
-                  <select className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]">
+                  <label htmlFor="workspace-theme" className="block text-[#015958] font-semibold mb-1">Theme</label>
+                  <select id="workspace-theme" title="Workspace theme" className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]">
                     <option>Light</option>
                     <option>Dark</option>
                   </select>

@@ -1,10 +1,11 @@
 'use client';
 
 import Link from "next/link";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "../components/Button";
-import { FeatureCard } from "../components/FeatureCard";
-import { ClipboardList, Calendar, MessageCircle, CheckCircle2, Users, Star, ArrowRight, Play } from "lucide-react";
+import { BackendError } from "../components/BackendError";
+import { ClipboardList, Calendar, MessageCircle, CheckCircle2, Users, Star, ArrowRight, Play, Server } from "lucide-react";
 
 const companies = [
   { name: 'Acme Corp' },
@@ -62,8 +63,44 @@ const testimonials = [
 ];
 
 export default function LandingPage() {
+  // Backend status check for development feedback
+  const [backendStatus, setBackendStatus] = useState<'checking' | 'available' | 'unavailable'>('checking');
+
+  // Check backend status on component mount
+  React.useEffect(() => {
+    const checkBackend = async () => {
+      try {
+        const response = await fetch('/api/health', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (response.ok) {
+          setBackendStatus('available');
+        } else {
+          setBackendStatus('unavailable');
+        }
+      } catch (error) {
+        setBackendStatus('unavailable');
+      }
+    };
+
+    checkBackend();
+  }, []);
+
   return (
     <main className="min-h-screen flex flex-col bg-gradient-to-br from-[#0FC2C0] via-[#0CABA8] to-[#023535] relative overflow-x-hidden">
+      {/* Backend Status Banner */}
+      {backendStatus === 'unavailable' && (
+        <div className="bg-amber-600 text-white px-4 py-2 text-center text-sm z-50 relative">
+          <div className="flex items-center justify-center gap-2">
+            <Server className="h-4 w-4" />
+            <span>Backend API not available. Some features may not work.</span>
+            <Link href="#backend-status" className="underline hover:no-underline ml-2">
+              Learn more
+            </Link>
+          </div>
+        </div>
+      )}
       {/* Animated Blobs */}
       <motion.div
         className="absolute top-[-100px] left-[-100px] w-[400px] h-[400px] rounded-full bg-[#0FC2C0] opacity-30 blur-3xl z-0"
@@ -296,7 +333,7 @@ export default function LandingPage() {
           <h2 className="text-2xl font-bold text-[#015958] mb-4">Stay in the Loop</h2>
           <p className="text-[#015958] mb-6">Get updates on new features, tips, and the upcoming live demo.</p>
           <form className="flex flex-col sm:flex-row gap-4 justify-center">
-            <input type="email" placeholder="Your email" className="px-6 py-3 rounded-lg border border-[#0FC2C0]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-white flex-1" />
+            <input aria-label="Newsletter email" type="email" placeholder="Your email" className="px-6 py-3 rounded-lg border border-[#0FC2C0]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-white flex-1" />
             <Button type="submit" className="bg-gradient-to-r from-[#0FC2C0] to-[#015958] hover:from-[#0CABA8] hover:to-[#008F8C] text-white px-8 py-3 rounded-lg font-semibold shadow transition">Subscribe</Button>
           </form>
         </div>
@@ -326,6 +363,41 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+      
+      {/* Backend Status Section - Development Info */}
+      <section id="backend-status" className="py-20 bg-white/60 backdrop-blur-md">
+        <div className="max-w-4xl mx-auto px-4">
+          <h2 className="text-2xl font-bold text-[#015958] mb-8 text-center">Development Status</h2>
+          <div className="bg-white rounded-xl shadow p-6 border border-[#0FC2C0]/20">
+            {backendStatus === 'checking' && (
+              <div className="text-center">
+                <Server className="h-8 w-8 text-[#0FC2C0] mx-auto mb-4 animate-spin" />
+                <p className="text-[#015958]">Checking backend connection...</p>
+              </div>
+            )}
+            
+            {backendStatus === 'available' && (
+              <div className="text-center">
+                <div className="w-8 h-8 bg-green-500 rounded-full mx-auto mb-4 flex items-center justify-center">
+                  <CheckCircle2 className="h-5 w-5 text-white" />
+                </div>
+                <h3 className="text-lg font-semibold text-green-700 mb-2">Backend API Available</h3>
+                <p className="text-[#015958]">All features are working properly. You can use the full application.</p>
+              </div>
+            )}
+            
+            {backendStatus === 'unavailable' && (
+              <div>
+                <BackendError 
+                  error={new Error("Backend server not running at localhost:4100")} 
+                  retry={() => window.location.reload()} 
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+      
       {/* Final CTA */}
       <section className="py-20">
         <div className="max-w-2xl mx-auto text-center">

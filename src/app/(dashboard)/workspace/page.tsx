@@ -1,11 +1,10 @@
 "use client";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Settings, Folder, UserPlus, CheckSquare, FileText, Activity as ActivityIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../../api";
-import { useToast } from "../../../components/toast";
 
 // Project count is fetched from API; Activity now uses real notifications where available
 
@@ -13,7 +12,6 @@ export default function WorkspacePage() {
   const [wsId, setWsId] = useState<number | null>(null);
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { addToast } = useToast();
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const fromUrl = searchParams?.get('ws');
@@ -39,81 +37,66 @@ export default function WorkspacePage() {
 
   const projectsHref = wsId != null ? `/workspace/projects?ws=${wsId}` : "/workspace/projects";
   const newProjectHref = wsId != null ? `/projects/new?ws=${wsId}` : "/projects/new";
-  const membersHref = wsId != null ? `/workspace/members?ws=${wsId}` : "/workspace/members";
   const inviteHref = wsId != null ? `/workspace/invite?ws=${wsId}` : "/workspace/invite";
   const settingsHref = wsId != null ? `/settings?ws=${wsId}` : "/settings";
 
-  // Fetch project count for the current workspace
-  const { data: projectsData } = useQuery({
-    queryKey: ["projects-count", wsId],
-    queryFn: async () => {
-      if (wsId == null) return null;
-      const res = await api.get("/projects", { params: { workspace_id: wsId } });
-      return res;
-    },
-    enabled: wsId != null,
-  });
-
   // Fetch notifications/activity for the current workspace
-  const { data: notifications } = useQuery({
+  const { data: notifications } = useQuery<unknown[]>({
     queryKey: ["notifications", wsId],
     queryFn: async () => {
-      if (wsId == null) return [] as any[];
+      if (wsId == null) return [] as unknown[];
       try {
         const res = await api.get("/notifications", { params: { workspace_id: wsId } });
-        const list: any[] = Array.isArray(res) ? res : Array.isArray((res as any)?.notifications) ? (res as any).notifications : [];
+        const list: unknown[] = Array.isArray(res)
+          ? (res as unknown[])
+          : (res && typeof res === 'object' && Array.isArray((res as Record<string, unknown>)['notifications']))
+          ? ((res as Record<string, unknown>)['notifications'] as unknown[])
+          : [];
         return list;
       } catch {
-        return [] as any[];
+        return [];
       }
     },
     enabled: wsId != null,
   });
 
-  const projectsCount = useMemo(() => {
-    if (!projectsData) return 0;
-    if (Array.isArray(projectsData)) return projectsData.length;
-    if (Array.isArray((projectsData as any).projects)) return (projectsData as any).projects.length;
-    return 0;
-  }, [projectsData]);
-
   // Fetch lists scoped to workspace (compact previews)
-  const { data: projectsList } = useQuery({
+  const { data: projectsList } = useQuery<unknown[]>({
     queryKey: ["projects", wsId],
     queryFn: async () => {
-      if (wsId == null) return [] as any[];
+      if (wsId == null) return [] as unknown[];
       const res = await api.get("/projects", { params: { workspace_id: wsId } });
-      const list: any[] = Array.isArray(res) ? res : Array.isArray((res as any)?.projects) ? (res as any).projects : [];
+      const list: unknown[] = Array.isArray(res) ? (res as unknown[]) : (res && typeof res === 'object' && Array.isArray((res as Record<string, unknown>)['projects'])) ? ((res as Record<string, unknown>)['projects'] as unknown[]) : [];
       return list;
     },
     enabled: wsId != null,
   });
 
-  const { data: tasksList } = useQuery({
+  const { data: tasksList } = useQuery<unknown[]>({
     queryKey: ["tasks", wsId],
     queryFn: async () => {
-      if (wsId == null) return [] as any[];
+      if (wsId == null) return [] as unknown[];
       try {
         const res = await api.get("/tasks", { params: { workspace_id: wsId } });
-        const list: any[] = Array.isArray(res) ? res : Array.isArray((res as any)?.tasks) ? (res as any).tasks : [];
+        const list: unknown[] = Array.isArray(res) ? (res as unknown[]) : (res && typeof res === 'object' && Array.isArray((res as Record<string, unknown>)['tasks'])) ? ((res as Record<string, unknown>)['tasks'] as unknown[]) : [];
         return list;
       } catch {
-        return [] as any[];
+        return [];
       }
     },
     enabled: wsId != null,
   });
 
-  const { data: notesList } = useQuery({
+  const { data: notesList } = useQuery<unknown[]>({
     queryKey: ["notes", wsId],
     queryFn: async () => {
-      if (wsId == null) return [] as any[];
+      if (wsId == null) return [] as unknown[];
       try {
         const res = await api.get("/notes", { params: { workspace_id: wsId } });
-        const list: any[] = Array.isArray(res) ? res : Array.isArray((res as any)?.notes) ? (res as any).notes : [];
+        const list: unknown[] = Array.isArray(res) ? (res as unknown[]) : (res && typeof res === 'object' && Array.isArray((res as Record<string, unknown>)['notes'])) ? ((res as Record<string, unknown>)['notes'] as unknown[]) : [];
         return list;
       } catch {
-        return [] as any[];
+        return [];
       }
     },
     enabled: wsId != null,
@@ -150,16 +133,17 @@ export default function WorkspacePage() {
           <div className="text-[#0CABA8] text-sm">No recent activity.</div>
         ) : (
           <ul className="space-y-2 w-full">
-            {notifications.slice(0,8).map((n: any, idx: number) => {
-              const title = n?.title || n?.subject || n?.type || "Notification";
-              const body = n?.body || n?.message || n?.description || "";
-              const timeRaw = n?.created_at || n?.createdAt || n?.time || n?.timestamp;
-              const timeStr = timeRaw ? new Date(timeRaw).toLocaleString() : "";
+            {notifications.slice(0,8).map((n: unknown, idx: number) => {
+              const nn = n as Record<string, unknown> | null;
+              const title = nn?.['title'] ?? nn?.['subject'] ?? nn?.['type'] ?? "Notification";
+              const body = nn?.['body'] ?? nn?.['message'] ?? nn?.['description'] ?? "";
+              const timeRaw = nn?.['created_at'] ?? nn?.['createdAt'] ?? nn?.['time'] ?? nn?.['timestamp'];
+              const timeStr = timeRaw ? new Date(String(timeRaw)).toLocaleString() : "";
               return (
-                <li key={n?.id ?? idx} className="text-[#015958] text-sm flex items-center gap-2">
-                  <span className="font-semibold text-[#0FC2C0]">{title}</span>
-                  {body && <span className="truncate">{body}</span>}
-                  {timeStr && <span className="ml-auto text-xs text-[#0CABA8]">{timeStr}</span>}
+                <li key={String((nn && nn['id']) ?? idx)} className="text-[#015958] text-sm flex items-center gap-2">
+                  <span className="font-semibold text-[#0FC2C0]">{String(title)}</span>
+                  {body && <span className="truncate">{String(body)}</span>}
+                  {timeStr && <span className="ml-auto text-xs text-[#0CABA8]">{String(timeStr)}</span>}
                 </li>
               );
             })}
@@ -174,13 +158,15 @@ export default function WorkspacePage() {
           <div className="text-[#0CABA8] text-sm">No projects yet.</div>
         ) : (
           <ul className="space-y-2">
-            {projectsList.slice(0,5).map((p: any) => {
-              const href = wsId != null ? `/projects/${p.id}?ws=${wsId}` : `/projects/${p.id}`;
+            {projectsList.slice(0,5).map((p: unknown) => {
+              const pp = p as Record<string, unknown> | null;
+              const id = pp?.['id'] ?? pp?.['projectId'] ?? pp?.['project_id'];
+              const href = wsId != null ? `/projects/${String(id)}?ws=${wsId}` : `/projects/${String(id)}`;
               return (
-                <li key={p.id}>
+                <li key={String(id)}>
                   <Link href={href} className="text-[#015958] text-sm flex items-center gap-2 hover:underline">
-                    <span className="font-medium">{p.name || `Project #${p.id}`}</span>
-                    {p.status && <span className="ml-auto text-xs text-[#0CABA8] capitalize">{p.status}</span>}
+                    <span className="font-medium">{String(pp?.['name'] ?? `Project #${String(id)}`)}</span>
+                    {typeof pp?.['status'] === 'string' && <span className="ml-auto text-xs text-[#0CABA8] capitalize">{String(pp['status'])}</span>}
                   </Link>
                 </li>
               );
@@ -200,13 +186,15 @@ export default function WorkspacePage() {
             <div className="text-[#0CABA8] text-sm mb-3">No tasks yet.</div>
           ) : (
             <ul className="space-y-2 mb-3">
-              {tasksList.slice(0,5).map((t: any) => {
-                const href = wsId != null ? `/tasks/${t.id}?ws=${wsId}` : `/tasks/${t.id}`;
+              {tasksList.slice(0,5).map((t: unknown) => {
+                const tt = t as Record<string, unknown> | null;
+                const id = tt?.['id'] ?? tt?.['taskId'] ?? tt?.['task_id'];
+                const href = wsId != null ? `/tasks/${String(id)}?ws=${wsId}` : `/tasks/${String(id)}`;
                 return (
-                  <li key={t.id}>
+                  <li key={String(id)}>
                     <Link href={href} className="text-[#015958] text-sm flex items-center gap-2 hover:underline">
-                      <span className="font-medium">{t.title || t.name || `Task #${t.id}`}</span>
-                      {t.status && <span className="ml-auto text-xs text-[#0CABA8] capitalize">{t.status}</span>}
+                      <span className="font-medium">{String(tt?.['title'] ?? tt?.['name'] ?? `Task #${String(id)}`)}</span>
+                      {typeof tt?.['status'] === 'string' && <span className="ml-auto text-xs text-[#0CABA8] capitalize">{String(tt['status'])}</span>}
                     </Link>
                   </li>
                 );
@@ -223,12 +211,14 @@ export default function WorkspacePage() {
             <div className="text-[#0CABA8] text-sm">No notes yet.</div>
           ) : (
             <ul className="space-y-2">
-              {notesList.slice(0,5).map((n: any) => {
-                const href = wsId != null ? `/notes/${n.id}?ws=${wsId}` : `/notes/${n.id}`;
+              {notesList.slice(0,5).map((n: unknown) => {
+                const nn = n as Record<string, unknown> | null;
+                const id = nn?.['id'] ?? nn?.['noteId'] ?? nn?.['note_id'];
+                const href = wsId != null ? `/notes/${String(id)}?ws=${wsId}` : `/notes/${String(id)}`;
                 return (
-                  <li key={n.id}>
+                  <li key={String(id)}>
                     <Link href={href} className="text-[#015958] text-sm flex items-center gap-2 hover:underline">
-                      <span className="font-medium">{n.title || `Note #${n.id}`}</span>
+                      <span className="font-medium">{String(nn?.['title'] ?? `Note #${String(id)}`)}</span>
                     </Link>
                   </li>
                 );

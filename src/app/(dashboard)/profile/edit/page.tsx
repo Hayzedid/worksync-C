@@ -17,10 +17,16 @@ export default function EditProfilePage() {
     setError("");
     setLoading(true);
     try {
-      await api.put("/users/me", { name, email });
+      // Clean payload: convert undefined to null for all fields
+      const rawBody = { name, email };
+      const body = Object.fromEntries(
+        Object.entries(rawBody).map(([k, v]) => [k, v === undefined ? null : v])
+      );
+      await api.put("/users/me", body);
       router.push("/profile");
-    } catch (err: any) {
-      setError(err.message || "Failed to update profile");
+    } catch (err: unknown) {
+      const maybe = (err as Record<string, unknown>)?.message;
+      setError(typeof maybe === 'string' ? maybe : "Failed to update profile");
     } finally {
       setLoading(false);
     }
@@ -36,11 +42,11 @@ export default function EditProfilePage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-[#015958] font-semibold mb-1">Name</label>
-            <input value={name} onChange={e => setName(e.target.value)} className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" required />
+            <input aria-label="Full name" placeholder="Full name" value={name} onChange={e => setName(e.target.value)} className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" required />
           </div>
           <div>
             <label className="block text-[#015958] font-semibold mb-1">Email</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" required />
+            <input aria-label="Email address" placeholder="you@example.com" type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" required />
           </div>
           {error && <div className="text-red-500">{error}</div>}
           <button disabled={loading} className="bg-[#0FC2C0] text-white px-4 py-2 rounded font-semibold hover:bg-[#0CABA8]">
