@@ -1,0 +1,33 @@
+/* Realtime Reactions Styles */
+@keyframes bounce-up-fade {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(-50%, -80%) scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -120%) scale(0.8);
+    opacity: 0;
+  }
+}
+
+.animate-bounce-up-fade {
+  animation: bounce-up-fade 3s ease-out forwards;
+}
+
+.reaction-emoji {
+  position: absolute;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  animation-duration: 3s;
+  animation-fill-mode: forwards;
+}
+
+/* Dynamic positioning classes */
+.reaction-pos-center {
+  left: 50%;
+  top: 50%;
+}

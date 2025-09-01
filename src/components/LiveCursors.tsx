@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect } from "react";
 import { useSocket } from "./SocketProvider";
 
 export type CursorData = {
@@ -23,12 +23,18 @@ export function LiveCursors({
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   cursors: CursorData[];
 }) {
+  // keep unused vars to preserve public signature for callers
+  void noteId;
+  void localUserName;
+  void textareaRef;
   // Render colored carets and selection highlights for each remote user
   // (For MVP, just show a list of users and their cursor positions)
   return (
     <div className="mb-2 flex flex-wrap gap-2 text-xs">
       {cursors.filter(c => c.userId !== localUserId).map(c => (
-        <span key={c.userId} style={{ color: c.color }}>
+        <span key={c.userId} data-color={c.color} className="inline-flex items-center gap-1">
+          {/* inline style for dynamic color (extraction to CSS is a separate task) */}
+          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: c.color }} />
           {c.userName} at {c.position}
         </span>
       ))}
@@ -55,7 +61,7 @@ export function useLiveCursors({
     if (!socket || !noteId || !textareaRef.current) return;
     function sendCursor() {
       const el = textareaRef.current!;
-      socket.emit("note:cursor", {
+      socket?.emit?.("note:cursor", {
         noteId,
         userId: localUserId,
         userName: localUserName,
@@ -64,13 +70,18 @@ export function useLiveCursors({
         selectionEnd: el.selectionEnd,
       });
     }
-    textareaRef.current.addEventListener("select", sendCursor);
-    textareaRef.current.addEventListener("keyup", sendCursor);
-    textareaRef.current.addEventListener("mouseup", sendCursor);
+    const el = textareaRef.current;
+    if (el) {
+      el.addEventListener("select", sendCursor);
+      el.addEventListener("keyup", sendCursor);
+      el.addEventListener("mouseup", sendCursor);
+    }
     return () => {
-      textareaRef.current?.removeEventListener("select", sendCursor);
-      textareaRef.current?.removeEventListener("keyup", sendCursor);
-      textareaRef.current?.removeEventListener("mouseup", sendCursor);
+      if (el) {
+        el.removeEventListener("select", sendCursor);
+        el.removeEventListener("keyup", sendCursor);
+        el.removeEventListener("mouseup", sendCursor);
+      }
     };
   }, [socket, noteId, localUserId, localUserName, textareaRef]);
 

@@ -1,0 +1,44 @@
+/* Typing indicator animations */
+.typing-dot-1 {
+  animation-delay: 0ms;
+}
+
+.typing-dot-2 {
+  animation-delay: 150ms;
+}
+
+.typing-dot-3 {
+  animation-delay: 300ms;
+}
+
+/* Presence indicator animations */
+.presence-pulse {
+  animation: presence-pulse 2s infinite;
+}
+
+@keyframes presence-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Activity indicator glow */
+.activity-glow {
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+}
+
+/* User avatar colors - will be set via React refs/effects */
+.user-avatar[data-user-color] {
+  /* Background color will be set via JavaScript */
+}
+
+.user-avatar-small[data-user-color] {
+  /* Background color will be set via JavaScript */
+}
+
+.activity-indicator[data-user-color] {
+  /* Background color will be set via JavaScript */
+}

@@ -1,0 +1,37 @@
+/* Universal Comments Styles */
+.user-avatar[data-user-color] {
+  background-color: var(--user-color, #6b7280);
+}
+
+/* Apply user colors via CSS custom properties */
+.user-avatar[data-user-color="red"] {
+  --user-color: #ef4444;
+}
+
+.user-avatar[data-user-color="blue"] {
+  --user-color: #3b82f6;
+}
+
+.user-avatar[data-user-color="green"] {
+  --user-color: #10b981;
+}
+
+.user-avatar[data-user-color="purple"] {
+  --user-color: #8b5cf6;
+}
+
+.user-avatar[data-user-color="yellow"] {
+  --user-color: #f59e0b;
+}
+
+.user-avatar[data-user-color="pink"] {
+  --user-color: #ec4899;
+}
+
+.user-avatar[data-user-color="indigo"] {
+  --user-color: #6366f1;
+}
+
+.user-avatar[data-user-color="gray"] {
+  --user-color: #6b7280;
+}
