@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import Image from 'next/image';
 import { Button } from '../Button';
 
 export function FileUpload({ onUpload }: { onUpload: (file: File) => void }) {
@@ -16,6 +17,7 @@ export function FileUpload({ onUpload }: { onUpload: (file: File) => void }) {
       <input
         id="file-upload-input"
         type="file"
+        aria-label="Select file to upload"
         ref={inputRef}
         className="hidden"
         onChange={e => {
@@ -25,14 +27,18 @@ export function FileUpload({ onUpload }: { onUpload: (file: File) => void }) {
       <Button className="bg-[#0FC2C0] text-white" onClick={() => inputRef.current?.click()}>Select File</Button>
       <div className="text-[#015958]">or drag and drop here</div>
       <div
+        id="file-drop-area"
         className="w-full h-32 flex items-center justify-center border border-[#0CABA8]/20 rounded bg-white"
+        role="region"
+        aria-label="File drop area"
+        aria-describedby="file-drop-desc"
         onDragOver={e => e.preventDefault()}
         onDrop={e => {
           e.preventDefault();
           if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
         }}
       >
-        {preview ? <img src={preview} alt="Preview" className="max-h-28 max-w-full object-contain" /> : <span className="text-[#0CABA8]">No file selected</span>}
+  {preview ? <Image src={preview} alt="Preview" width={112} height={112} className="max-h-28 max-w-full object-contain" /> : <span id="file-drop-desc" className="text-[#0CABA8]">No file selected</span>}
       </div>
     </div>
   );

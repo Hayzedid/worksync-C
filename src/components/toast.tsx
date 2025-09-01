@@ -1,5 +1,6 @@
 "use client";
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
+import hotToast, { Toaster } from 'react-hot-toast';
 
 export type ToastVariant = "success" | "error" | "info";
 export type Toast = {
@@ -28,6 +29,15 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   const addToast = useCallback((t: Omit<Toast, "id">) => {
     const id = `${Date.now()}_${ctr.current++}`;
+    
+    // Use react-hot-toast for better UX
+    if (t.variant === 'success') {
+      hotToast.success(t.title || t.description || 'Success');
+    } else if (t.variant === 'error') {
+      hotToast.error(t.title || t.description || 'Error');
+    } else {
+      hotToast(t.title || t.description || 'Info');
+    }
     const toast: Toast = { id, duration: 3000, variant: "info", ...t };
     setToasts(prev => [...prev, toast]);
     const dur = toast.duration ?? 3000;
@@ -50,33 +60,5 @@ export function useToast() {
 }
 
 export function ToastHost() {
-  const { toasts, removeToast } = useToast();
-  return (
-    <div className="fixed z-[1000] bottom-4 right-4 flex flex-col gap-2">
-      {toasts.map(t => (
-        <div
-          key={t.id}
-          className={`min-w-[260px] max-w-[380px] rounded-md border px-4 py-3 shadow bg-white ${
-            t.variant === "success" ? "border-green-300" : t.variant === "error" ? "border-red-300" : "border-[#0CABA8]/40"
-          }`}
-          role="status"
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              {t.title && <div className="text-sm font-semibold text-[#015958]">{t.title}</div>}
-              {t.description && <div className="text-xs text-[#0CABA8] mt-0.5">{t.description}</div>}
-            </div>
-            <button
-              className="text-xs text-[#0CABA8] hover:underline"
-              onClick={() => removeToast(t.id)}
-              aria-label="Dismiss"
-              type="button"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
+  return <Toaster position="bottom-right" />;
 }
