@@ -457,7 +457,7 @@ function KanbanCardComponent({
             title="Delete card"
             aria-label="Delete card"
           >
-            <Trash2 size={14} />
+            <Trash2 className="icon-delete" />
           </button>
         </div>
       </div>

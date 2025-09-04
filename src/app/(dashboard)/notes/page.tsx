@@ -4,8 +4,16 @@ import React, { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../../api";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, MessageCircle } from "lucide-react";
 import { useToast } from "../../../components/toast";
+import { useAuth } from "../../../hooks/useAuth";
+import ConfirmDialog from "../../../components/ConfirmDialog";
+import {
+  ItemPresenceIndicator,
+  UniversalComments,
+  RealtimeReactions
+} from "../../../components/collaboration";
+import { useGlobalPresence } from "../../../hooks/collaboration/useGlobalPresence";
 
 type Note = {
   id: number;
@@ -19,6 +27,7 @@ type Note = {
 export default function NotesPage() {
   const qc = useQueryClient();
   const { addToast } = useToast();
+  const auth = useAuth();
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -49,6 +58,16 @@ export default function NotesPage() {
 
   const effectiveWsId = wsIdFromUrl ?? currentWsId;
 
+  // presence and comment expansion for notes (match tasks page behavior)
+  const [expandedComments, setExpandedComments] = useState<Set<number>>(new Set());
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [targetNote, setTargetNote] = useState<{ id: number; title?: string } | null>(null);
+  const { presence, setActivityStatus } = useGlobalPresence(
+    auth?.user?.id?.toString() || '',
+    auth?.user?.name || 'Guest',
+    'notes'
+  );
+
   // Keep URL in sync with effective workspace id
   useEffect(() => {
     if (effectiveWsId == null) return;
@@ -63,8 +82,9 @@ export default function NotesPage() {
 
   const { data, isLoading, isError, error } = useQuery<unknown>({
     queryKey: ["notes", { workspace_id: effectiveWsId }],
-    queryFn: () => api.get("/notes", { params: { workspace_id: effectiveWsId } }),
-    enabled: effectiveWsId != null,
+    queryFn: () => api.get("/notes", { params: effectiveWsId != null ? { workspace_id: effectiveWsId } : undefined }),
+    // Allow notes to load even when no workspace is selected; server may return all or general notes
+    enabled: true,
   });
   // Fetch projects to resolve names when notes only provide projectId (scoped to workspace)
   const { data: projectsData } = useQuery<unknown>({
@@ -104,7 +124,7 @@ export default function NotesPage() {
     const project = nn?.project as Record<string, unknown> | undefined;
     if (project && typeof project.name === 'string') return project.name;
     if (nn && typeof nn.project_name === 'string') return nn.project_name;
-    if (pid != null) return projectNameById[String(pid)] ?? `Project #${pid}`;
+    if (pid != null) return projectNameById[String(pid)] ?? "Untitled Project";
     return "General";
   };
   const toWsId = (n: unknown): number | null => {
@@ -128,6 +148,17 @@ export default function NotesPage() {
 
   const generalNotes = notes.filter(n => toPid(n) == null);
   const projectNotes = notes.filter(n => toPid(n) != null);
+  const toContent = (n: unknown): string => {
+    const nn = n as Record<string, unknown> | null;
+    if (!nn) return "";
+    return typeof (nn as any).content === 'string' ? (nn as any).content : '';
+  };
+  const toCreatedAt = (n: unknown): string | null => {
+    const nn = n as Record<string, unknown> | null;
+    if (!nn) return null;
+    const raw = (nn as any).created_at ?? (nn as any).createdAt ?? (nn as any).created;
+    return raw ? String(raw) : null;
+  };
   const groupedByProject = projectNotes.reduce<Record<string, { projectName: string; projectId: number; items: Note[] }>>((acc, n) => {
     const pid = toPid(n)!;
     const pname = toPname(n, pid);
@@ -136,6 +167,23 @@ export default function NotesPage() {
     acc[key].items.push(n);
     return acc;
   }, {});
+
+  // If no workspace is selected but notes were returned, try to infer and persist a workspace id
+  useEffect(() => {
+    if (effectiveWsId != null) return;
+    if (!Array.isArray(notes) || notes.length === 0) return;
+    // prefer any note that has a workspace id
+    const candidate = notes.map(n => toWsId(n)).find(id => id != null) ?? null;
+    if (candidate != null && typeof window !== 'undefined') {
+      setCurrentWsId(candidate);
+      sessionStorage.setItem('current_workspace_id', String(candidate));
+    }
+  }, [effectiveWsId, notes]);
+
+  function openDeleteConfirm(id: number, title?: string) {
+    setTargetNote({ id, title });
+    setConfirmOpen(true);
+  }
 
   async function handleDeleteNote(id: number) {
     try {
@@ -155,83 +203,115 @@ export default function NotesPage() {
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold text-[#0FC2C0]">Notes</h1>
-          <Link href="/notes/new" className="flex items-center gap-2 px-4 py-2 bg-[#0FC2C0] text-white rounded hover:bg-[#0CABA8] transition-colors font-semibold"><Plus className="h-4 w-4" /> New Note</Link>
+          <Link href={effectiveWsId != null ? `/notes/new?ws=${effectiveWsId}` : "/notes/new"} className="flex items-center gap-2 px-4 py-2 bg-[#0FC2C0] text-white rounded hover:bg-[#0CABA8] transition-colors font-semibold"><Plus className="h-4 w-4" /> New Note</Link>
         </div>
-        {effectiveWsId == null && (
-          <div className="text-[#015958] mb-4">Select a workspace first (open Workspace page to set it), or append ?ws=&lt;id&gt; to the URL.</div>
-        )}
         {isLoading && effectiveWsId != null && <div className="text-[#015958]">Loading...</div>}
         {isError && (
           <div className="text-red-500">Failed to load notes{error && (error as { message?: string }).message ? `: ${(error as { message?: string }).message}` : ''}</div>
         )}
 
-        {/* General notes grouped (by workspace) */}
-        {(() => {
-          const grouped = generalNotes.reduce<Record<string, { wsName: string | null; wsId: number | null; items: Note[] }>>((acc, n) => {
-            const wsName = toWsName(n);
-            const wsId = toWsId(n);
-            const key = wsName ? `name:${wsName}` : wsId != null ? `id:${wsId}` : 'none';
-            if (!acc[key]) acc[key] = { wsName: wsName ?? null, wsId: wsId ?? null, items: [] };
-            acc[key].items.push(n);
-            return acc;
-          }, {});
-          const groups = Object.values(grouped);
-          return groups.length ? (
-            <div className="space-y-6 mb-8">
-              {groups.map((group, idx) => (
-                <div key={idx} className="bg-white rounded-xl shadow border border-[#0CABA8]/20 p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="text-[#0FC2C0] font-semibold">General</div>
-                    {(group.wsName || group.wsId != null) && (
-                      <span className="text-xs bg-[#F6FFFE] border border-[#0CABA8]/40 text-[#015958] px-2 py-1 rounded">
-                        Workspace: {group.wsName ?? `#${group.wsId}`}
-                      </span>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {group.items.map(n => (
-                      <div key={n.id} className="border border-[#0CABA8]/20 rounded-md p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="text-[#015958] font-medium">{n.title}</div>
-                          <button
-                            onClick={() => handleDeleteNote(n.id)}
-                            className="text-red-600 hover:text-red-700"
-                            type="button"
-                            aria-label="Delete note"
-                            title="Delete note"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+        {/* General notes first */}
+        <div className="mb-8">
+          <h2 className="text-xl font-bold text-[#0FC2C0] mb-3">General Notes</h2>
+          {generalNotes.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {generalNotes.map(n => (
+                <div key={n.id} className="border border-[#0CABA8]/20 rounded-md p-4 relative bg-white">
+                  <RealtimeReactions
+                    itemType="note"
+                    itemId={String(n.id)}
+                    currentUserId={auth?.user?.id?.toString() || ''}
+                    currentUserName={auth?.user?.name || 'Guest'}
+                    className="absolute inset-0 rounded-md"
+                  />
+                  <div className="relative z-10">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <Link
+                          href={`/notes/${n.id}`}
+                          className="text-[#015958] font-medium cursor-pointer hover:text-[#0FC2C0] hover:underline"
+                          onClick={() => setActivityStatus('note', String((n as any).id), 'viewing')}
+                        >
+                          {(n as any).title}
+                        </Link>
+                        <div className="text-sm text-gray-700 mt-1">{toContent(n).slice(0, 180)}{toContent(n).length > 180 ? '…' : ''}</div>
+                        <div className="mt-3 flex items-center gap-2">
+                          <span className="text-xs bg-white border border-[#0CABA8]/40 text-[#013937] px-2 py-1 rounded">{toPname(n, toPid(n))}</span>
+                          {toWsName(n) && <span className="text-xs bg-white border border-[#0CABA8]/40 text-[#013937] px-2 py-1 rounded">Workspace: {toWsName(n)}</span>}
+                          {toCreatedAt(n) && <span className="text-xs text-gray-500">{new Date(String(toCreatedAt(n))).toLocaleString()}</span>}
+                        </div>
+                        <div className="mt-2">
+                          <ItemPresenceIndicator
+                            users={presence.users}
+                            currentUserId={auth?.user?.id?.toString() || ''}
+                            itemType="note"
+                            itemId={String((n as any).id)}
+                            className="mb-2"
+                          />
                         </div>
                       </div>
-                    ))}
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            const newExpanded = new Set(expandedComments);
+                            if (newExpanded.has((n as any).id)) newExpanded.delete((n as any).id);
+                            else newExpanded.add((n as any).id);
+                            setExpandedComments(newExpanded);
+                          }}
+                          className="text-[#0FC2C0] hover:text-[#0CABA8]"
+                          title="Toggle comments"
+                        >
+                          <MessageCircle className="icon-comment" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteNote((n as any).id)}
+                          className="text-red-600 hover:text-red-700"
+                          type="button"
+                          aria-label="Delete note"
+                          title="Delete note"
+                        >
+                          <Trash2 className="icon-delete" />
+                        </button>
+                      </div>
+                    </div>
+                    {expandedComments.has((n as any).id) && auth?.user && (
+                      <div className="mt-4 border-t border-[#0CABA8]/20 pt-4">
+                        <UniversalComments
+                          itemType="note"
+                          itemId={String((n as any).id)}
+                          currentUserId={auth.user.id?.toString() || ''}
+                          currentUserName={auth.user.name || 'User'}
+                          users={presence.users}
+                          className="max-h-60 overflow-y-auto"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            !isLoading && !isError ? (
-              <div className="text-[#0CABA8] mb-8">No general notes.</div>
-            ) : null
-          );
-        })()}
+            !isLoading && !isError && (
+              <div className="text-[#0CABA8]">No general notes.</div>
+            )
+          )}
+        </div>
 
-        {/* Notes under projects */}
+        {/* Notes in workspace projects */}
         <div className="space-y-6">
           {Object.values(groupedByProject).map(group => (
             <div key={group.projectId} className="bg-white rounded-xl shadow border border-[#0CABA8]/20 p-4">
               <div className="flex items-center justify-between mb-3">
                 <Link href={effectiveWsId != null ? `/projects/${group.projectId}?ws=${effectiveWsId}` : `/projects/${group.projectId}`} className="text-[#0FC2C0] font-semibold hover:underline">
-                  {group.projectName}
+                  Notes in project: {group.projectName}
                 </Link>
                 <div className="flex items-center gap-2">
                   {(() => {
                     const sample = group.items[0];
                     const wsName = toWsName(sample);
-                    const wsId = toWsId(sample);
-                    return wsName || wsId != null ? (
+                    return wsName ? (
                       <span className="text-xs bg-[#F6FFFE] border border-[#0CABA8]/40 text-[#015958] px-2 py-1 rounded">
-                        Workspace: {wsName ?? `#${wsId}`}
+                        Workspace: {wsName}
                       </span>
                     ) : null;
                   })()}
@@ -247,20 +327,77 @@ export default function NotesPage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {group.items.map(n => (
-                  <div key={n.id} className="border border-[#0CABA8]/20 rounded-md p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="text-[#015958] font-medium">{n.title}</div>
-                      {/* Workspace badge per note if available */}
-                      {/* Keeping header badge only to reduce clutter; can enable per-note badge like Tasks if needed */}
-                      <button
-                        onClick={() => handleDeleteNote(n.id)}
-                        className="text-red-600 hover:text-red-700"
-                        type="button"
-                        aria-label="Delete note"
-                        title="Delete note"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                  <div key={n.id} className="border border-[#0CABA8]/20 rounded-md p-4 relative">
+                    <RealtimeReactions
+                      itemType="note"
+                      itemId={String(n.id)}
+                      currentUserId={auth?.user?.id?.toString() || ''}
+                      currentUserName={auth?.user?.name || 'Guest'}
+                      className="absolute inset-0 rounded-md"
+                    />
+                    <div className="relative z-10">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <Link 
+                            href={`/notes/${n.id}`}
+                            className="text-gray-900 font-medium hover:text-[#0FC2C0] cursor-pointer"
+                          >
+                            {(n as any).title}
+                          </Link>
+                          <div className="text-sm text-gray-700 mt-1">{toContent(n).slice(0, 180)}{toContent(n).length > 180 ? '…' : ''}</div>
+                          <div className="mt-3 flex items-center gap-2">
+                            <span className="text-xs bg-[#F6FFFE] border border-[#0CABA8]/40 text-[#015958] px-2 py-1 rounded">{toPname(n, toPid(n))}</span>
+                            {toWsName(n) && <span className="text-xs bg-[#F6FFFE] border border-[#0CABA8]/40 text-[#015958] px-2 py-1 rounded">Workspace: {toWsName(n)}</span>}
+                            {toCreatedAt(n) && <span className="text-xs text-gray-500">{new Date(String(toCreatedAt(n))).toLocaleString()}</span>}
+                          </div>
+                          <div className="mt-2">
+                            <ItemPresenceIndicator
+                              users={presence.users}
+                              currentUserId={auth?.user?.id?.toString() || ''}
+                              itemType="note"
+                              itemId={String((n as any).id)}
+                              className="mb-2"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              const newExpanded = new Set(expandedComments);
+                              if (newExpanded.has((n as any).id)) newExpanded.delete((n as any).id);
+                              else newExpanded.add((n as any).id);
+                              setExpandedComments(newExpanded);
+                            }}
+                            className="text-[#0FC2C0] hover:text-[#0CABA8]"
+                            title="Toggle comments"
+                          >
+                            <MessageCircle className="icon-comment" />
+                          </button>
+                          <button
+                            onClick={() => openDeleteConfirm((n as any).id, (n as any).title)}
+                            className="text-red-600 hover:text-red-700"
+                            type="button"
+                            aria-label="Delete note"
+                            title="Delete note"
+                          >
+                            <Trash2 className="icon-delete" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {expandedComments.has((n as any).id) && auth?.user && (
+                        <div className="mt-4 border-t border-[#0CABA8]/20 pt-4">
+                          <UniversalComments
+                            itemType="note"
+                            itemId={String((n as any).id)}
+                            currentUserId={auth.user.id?.toString() || ''}
+                            currentUserName={auth.user.name || 'User'}
+                            users={presence.users}
+                            className="max-h-60 overflow-y-auto"
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -273,6 +410,23 @@ export default function NotesPage() {
         </div>
 
       </div>
+      
+      <ConfirmDialog
+        open={confirmOpen}
+        title={`Delete note${targetNote?.title ? ` '${targetNote.title}'` : ''}`}
+        description="This action will permanently remove the note. This cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={async () => {
+          setConfirmOpen(false);
+          if (targetNote?.id) await handleDeleteNote(targetNote.id);
+          setTargetNote(null);
+        }}
+        onCancel={() => {
+          setConfirmOpen(false);
+          setTargetNote(null);
+        }}
+      />
     </div>
   );
 }

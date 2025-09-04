@@ -25,7 +25,7 @@ const features = [
     description: 'Schedule, sync, and never miss a deadline again.'
   },
   {
-    icon: <MessageCircle size={36} />, title: 'Team Chat',
+  icon: <MessageCircle className="icon-comment" />, title: 'Team Chat',
     description: 'Collaborate in real time with built-in chat and comments.'
   },
   {
@@ -38,7 +38,7 @@ const steps = [
   { icon: <Users size={28} />, title: 'Sign Up', desc: 'Create your workspace and invite your team.' },
   { icon: <ClipboardList size={28} />, title: 'Organize', desc: 'Set up boards, tasks, and notes.' },
   { icon: <Calendar size={28} />, title: 'Plan', desc: 'Schedule events and deadlines.' },
-  { icon: <MessageCircle size={28} />, title: 'Collaborate', desc: 'Chat, comment, and get things done together.' },
+  { icon: <MessageCircle className="icon-comment" />, title: 'Collaborate', desc: 'Chat, comment, and get things done together.' },
 ];
 
 const testimonials = [
@@ -187,7 +187,7 @@ export default function LandingPage() {
                     <Calendar className="text-[#0CABA8]" size={32} />
                   </div>
                   <div className="w-16 h-16 bg-[#008F8C]/30 rounded-lg flex items-center justify-center">
-                    <MessageCircle className="text-[#008F8C]" size={32} />
+                    <MessageCircle className="text-[#008F8C] icon-comment" />
                   </div>
                 </div>
               </div>

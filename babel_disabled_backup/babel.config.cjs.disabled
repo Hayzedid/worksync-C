@@ -1,3 +1,0 @@
-// Neutralized babel.config.cjs - exports empty object to satisfy loaders
-// If you need Babel customizations, restore from babel.config.cjs.backup
-module.exports = {};

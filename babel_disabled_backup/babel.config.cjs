@@ -1,1 +1,0 @@
-// Renamed to disable Babel config detection by Next.js. See babel.config.cjs.disabled for backup.

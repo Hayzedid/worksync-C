@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSocket } from '../../components/SocketProvider';
-import * as Y from 'yjs';
+import Y, { Y as Yns } from '../../lib/singleYjs';
 import { WebsocketProvider } from 'y-websocket';
 
 export interface CollaborativeTask {

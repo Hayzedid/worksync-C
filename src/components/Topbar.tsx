@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useSocket } from './SocketProvider';
 import { NotificationList } from './notifications/NotificationList';
 import { useNotifications } from './notifications/NotificationProvider';
+import ConfirmDialog from './ConfirmDialog';
 
 export default function Topbar() {
   const { user } = useAuth() || {};
@@ -16,6 +17,7 @@ export default function Topbar() {
   const notifRef = useRef<HTMLDivElement | null>(null);
   const socket = useSocket();
   const { notifications, addNotification, markRead, deleteNotif } = useNotifications();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   // Listen for real-time notifications from socket
   useEffect(() => {
@@ -40,16 +42,7 @@ export default function Topbar() {
   }, [showNotif]);
 
   function handleLogout() {
-    const ok = window.confirm('Are you sure you want to log out?');
-    if (!ok) return;
-    try {
-      if (typeof window !== 'undefined') {
-        sessionStorage.removeItem('access_token');
-        sessionStorage.removeItem('current_workspace_id');
-      }
-    } finally {
-      router.replace('/login');
-    }
+  setShowLogoutConfirm(true);
   }
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center gap-x-4 border-b border-[#0CABA8]/40 bg-[#0FC2C0] px-4 shadow-sm lg:pl-64">
@@ -99,6 +92,25 @@ export default function Topbar() {
       >
         <LogOut className="h-5 w-5" />
       </button>
+      <ConfirmDialog
+        open={showLogoutConfirm}
+        title="Log out"
+        description="Are you sure you want to log out?"
+        confirmLabel="Log out"
+        cancelLabel="Cancel"
+        onConfirm={() => {
+          try {
+            if (typeof window !== 'undefined') {
+              sessionStorage.removeItem('access_token');
+              sessionStorage.removeItem('current_workspace_id');
+            }
+          } finally {
+            setShowLogoutConfirm(false);
+            router.replace('/login');
+          }
+        }}
+        onCancel={() => setShowLogoutConfirm(false)}
+      />
     </header>
   );
 }

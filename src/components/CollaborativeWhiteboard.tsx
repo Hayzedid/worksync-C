@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import * as Y from 'yjs';
+import Y, { Y as Yns } from '../lib/singleYjs';
 import { useYjsDoc } from '../hooks/useYjsDoc';
 
 type Point = { x: number; y: number };

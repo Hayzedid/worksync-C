@@ -59,24 +59,24 @@ export default function NewNotePage() {
 
   return (
     <div className="min-h-screen bg-[#F6FFFE] p-8">
-      <div className="max-w-xl mx-auto bg-white rounded-xl shadow p-6 border border-[#0CABA8]/20">
+  <div className="max-w-xl mx-auto bg-white rounded-xl shadow p-6 border border-[#0CABA8]/20">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-[#0FC2C0] flex items-center gap-2"><FileText className="h-5 w-5" /> New Note</h1>
           <Link href="/notes" className="text-[#0CABA8] hover:underline">Back</Link>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="note-title" className="block text-[#015958] font-semibold mb-1">Title</label>
-            <input id="note-title" name="title" autoComplete="off" value={title} onChange={e => setTitle(e.target.value)} className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" required />
+            <label htmlFor="note-title" className="block text-[#013937] font-semibold mb-1">Title</label>
+              <input id="note-title" name="title" autoComplete="off" value={title} onChange={e => setTitle(e.target.value)} className="w-full px-4 py-2 rounded border border-gray-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0CABA8] text-gray-900 bg-white" required />
           </div>
           <div>
-            <label htmlFor="note-content" className="block text-[#015958] font-semibold mb-1">Content</label>
-            <textarea id="note-content" name="content" autoComplete="off" value={content} onChange={e => setContent(e.target.value)} rows={6} className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" />
+            <label htmlFor="note-content" className="block text-[#013937] font-semibold mb-1">Content</label>
+              <textarea id="note-content" name="content" autoComplete="off" value={content} onChange={e => setContent(e.target.value)} rows={6} className="w-full px-4 py-2 rounded border border-gray-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0CABA8] text-gray-900 bg-white" />
           </div>
           {error && <div className="text-red-500">{error}</div>}
           <div className="flex items-center justify-end gap-3">
-            <Link href="/notes" className="px-4 py-2 rounded border border-[#0CABA8]/40 text-[#015958] bg-white hover:bg-[#F6FFFE]">Cancel</Link>
-            <button disabled={loading} className="bg-[#0FC2C0] text-white px-4 py-2 rounded font-semibold hover:bg-[#0CABA8] disabled:opacity-70">
+              <Link href="/notes" className="px-4 py-2 rounded border border-gray-300 bg-white text-gray-900 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0CABA8]">Cancel</Link>
+              <button disabled={loading} className="bg-[#015958] text-white px-4 py-2 rounded font-semibold hover:bg-[#0CABA8] disabled:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0CABA8]">
               {loading ? "Creating..." : "Create Note"}
             </button>
           </div>

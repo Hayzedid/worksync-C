@@ -131,9 +131,10 @@ export const CollaborativeTaskEditor: React.FC<CollaborativeTaskEditorProps> = (
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'todo': return 'bg-gray-100 text-gray-800 border-gray-200';
-      case 'in-progress': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'in_progress': return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'review': return 'bg-purple-100 text-purple-800 border-purple-200';
       case 'done': return 'bg-green-100 text-green-800 border-green-200';
+      case 'cancelled': return 'bg-red-100 text-red-800 border-red-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
@@ -208,7 +209,7 @@ export const CollaborativeTaskEditor: React.FC<CollaborativeTaskEditorProps> = (
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700">Status</label>
             <div className="flex gap-2">
-              {(['todo', 'in-progress', 'review', 'done'] as const).map((status) => (
+        {(['todo', 'in_progress', 'review', 'done', 'cancelled'] as const).map((status) => (
                 <button
                   key={status}
                   onClick={() => handleStatusChange(status)}
@@ -218,7 +219,7 @@ export const CollaborativeTaskEditor: React.FC<CollaborativeTaskEditorProps> = (
                       : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
                   }`}
                 >
-                  {status === 'in-progress' ? 'In Progress' : status.charAt(0).toUpperCase() + status.slice(1)}
+          {status === 'in_progress' ? 'In Progress' : status === 'todo' ? 'To do' : status.charAt(0).toUpperCase() + status.slice(1)}
                 </button>
               ))}
             </div>

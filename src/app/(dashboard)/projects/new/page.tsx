@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "../../../../api";
+import { useQueryClient } from '@tanstack/react-query';
 import { FolderPlus } from "lucide-react";
 
 export default function NewProjectPage() {
@@ -12,6 +13,7 @@ export default function NewProjectPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const qc = useQueryClient();
 
   const wsParam = searchParams.get("ws");
   const wsIdFromUrl = (() => {
@@ -54,6 +56,25 @@ export default function NewProjectPage() {
       );
       const id = created?.id || created?.project?.id || created?.data?.id;
       const wsId = created?.workspaceId || created?.workspace_id || created?.workspace?.id || currentWsId;
+      // Optimistically update the workspace projects list so the new project appears at the top.
+      try {
+        if (wsId != null) {
+          const key = ["projects", { workspace_id: Number(wsId) }];
+          const prev = qc.getQueryData<any>(key);
+          const newProject = created && typeof created === 'object' ? created : { id, name, status: status?.toLowerCase(), workspaceId: wsId, createdAt: new Date().toISOString() };
+          // Normalize shapes: if previous data was an object with `projects` array, update similarly
+          if (prev && Array.isArray(prev)) {
+            qc.setQueryData(key, [newProject, ...prev]);
+          } else if (prev && typeof prev === 'object' && Array.isArray(prev.projects)) {
+            qc.setQueryData(key, { ...prev, projects: [newProject, ...prev.projects] });
+          } else {
+            qc.setQueryData(key, [newProject]);
+          }
+        }
+      } catch (cacheErr) {
+        // Non-fatal: if cache update fails, continue to redirect and let the page refetch.
+        console.warn('Optimistic cache update failed', cacheErr);
+      }
       // Prefer redirect to workspace-scoped list so it appears immediately
       if (wsId != null) {
         router.push(`/workspace/projects?ws=${wsId}`);

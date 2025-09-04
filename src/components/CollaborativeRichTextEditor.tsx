@@ -3,7 +3,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Collaboration from '@tiptap/extension-collaboration';
 import CollaborationCursor from '@tiptap/extension-collaboration-cursor';
-import * as Y from 'yjs';
+import Y, { Y as Yns } from '../lib/singleYjs';
 import { WebsocketProvider } from 'y-websocket';
 
 interface CollaborativeRichTextEditorProps {

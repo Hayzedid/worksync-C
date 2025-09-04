@@ -3,6 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from '../../../components/Button';
 import { User, Bell, Building2 } from 'lucide-react';
+import ConfirmDialog from "../../../components/ConfirmDialog";
 
 const tabs = [
   { name: "Profile", icon: User },
@@ -12,6 +13,13 @@ const tabs = [
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("Profile");
+  const [deleteWorkspaceConfirm, setDeleteWorkspaceConfirm] = useState(false);
+
+  function handleDeleteWorkspace() {
+    // Implementation would go here
+    console.log("Workspace deleted");
+    setDeleteWorkspaceConfirm(false);
+  }
 
   return (
     <div className="min-h-screen bg-[#F6FFFE] p-8">
@@ -88,12 +96,27 @@ export default function SettingsPage() {
               <div className="border-t border-[#0CABA8]/20 pt-4">
                 <div className="text-[#015958] font-semibold mb-2">Danger Zone</div>
                 <div className="text-sm text-[#0CABA8] mb-3">Deleting a workspace is permanent and will remove all projects, tasks, and notes in it.</div>
-                <button className="px-4 py-2 rounded bg-red-500 text-white hover:bg-red-600">Delete Workspace</button>
+                <button 
+                  onClick={() => setDeleteWorkspaceConfirm(true)}
+                  className="px-4 py-2 rounded bg-red-500 text-white hover:bg-red-600"
+                >
+                  Delete Workspace
+                </button>
               </div>
             </div>
           )}
         </div>
       </div>
+      
+      <ConfirmDialog
+        open={deleteWorkspaceConfirm}
+        title="Delete Workspace"
+        description="This action will permanently delete the workspace and all its projects, tasks, and notes. This cannot be undone."
+        confirmLabel="Delete Workspace"
+        cancelLabel="Cancel"
+        onConfirm={handleDeleteWorkspace}
+        onCancel={() => setDeleteWorkspaceConfirm(false)}
+      />
     </div>
   );
 }

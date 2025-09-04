@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import ConfirmDialog from '../ConfirmDialog';
 import { UniversalComment, useUniversalComments } from '@/hooks/collaboration/useUniversalComments';
 import { GlobalPresenceUser } from '@/hooks/collaboration/useGlobalPresence';
 import './UniversalComments.css';
@@ -77,14 +78,21 @@ export const UniversalComments: React.FC<UniversalCommentsProps> = ({
     }
   };
 
-  const handleDeleteComment = async (commentId: string) => {
-    if (confirm('Are you sure you want to delete this comment?')) {
-      try {
-        await deleteComment(commentId);
-      } catch (err) {
-        console.error('Failed to delete comment:', err);
-      }
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [targetCommentId, setTargetCommentId] = useState<string | null>(null);
+
+  const handleDeleteComment = async (commentId?: string) => {
+    if (!commentId) return;
+    try {
+      await deleteComment(commentId);
+    } catch (err) {
+      console.error('Failed to delete comment:', err);
     }
+  };
+
+  const promptDeleteComment = (commentId: string) => {
+    setTargetCommentId(commentId);
+    setConfirmOpen(true);
   };
 
   const startEdit = (comment: UniversalComment) => {
@@ -112,7 +120,19 @@ export const UniversalComments: React.FC<UniversalCommentsProps> = ({
   };
 
   const getUserById = (userId: string) => {
-    return users.find(user => user.id === userId) || {
+    const foundUser = users.find(user => user.id === userId);
+    
+    // If not found in users array, check if it's the current user
+    if (!foundUser && userId === currentUserId) {
+      return {
+        id: currentUserId,
+        name: currentUserName,
+        avatar: undefined,
+        color: '#0FC2C0'
+      };
+    }
+    
+    return foundUser || {
       id: userId,
       name: 'Unknown User',
       avatar: undefined,
@@ -250,7 +270,7 @@ export const UniversalComments: React.FC<UniversalCommentsProps> = ({
                         Edit
                       </button>
                       <button
-                        onClick={() => handleDeleteComment(comment.id)}
+                        onClick={() => promptDeleteComment(comment.id)}
                         className="hover:text-red-600"
                       >
                         Delete
@@ -273,92 +293,127 @@ export const UniversalComments: React.FC<UniversalCommentsProps> = ({
     );
   };
 
-  const topLevelComments = comments.filter(comment => !comment.parentId);
+  const topLevelComments = comments
+    .filter(comment => !comment.parentId)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   if (loading) {
     return (
-      <div className={`flex items-center justify-center p-8 ${className}`}>
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-      </div>
+      <>
+        <div className={`flex items-center justify-center p-8 ${className}`}>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+        </div>
+        <ConfirmDialog
+          open={confirmOpen}
+          title={`Delete comment`}
+          description={`Are you sure you want to delete this comment? This action cannot be undone.`}
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+          onConfirm={async () => {
+            setConfirmOpen(false);
+            if (targetCommentId) await handleDeleteComment(targetCommentId);
+            setTargetCommentId(null);
+          }}
+          onCancel={() => {
+            setConfirmOpen(false);
+            setTargetCommentId(null);
+          }}
+        />
+      </>
     );
   }
 
   return (
-    <div className={`space-y-4 ${className}`}>
-      {/* Add Comment Form */}
-      <form onSubmit={handleSubmitComment} className="space-y-3">
-        {replyToId && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-blue-700">
-                Replying to comment
-              </span>
-              <button
-                type="button"
-                onClick={() => setReplyToId(null)}
-                className="text-blue-700 hover:text-blue-900"
-              >
-                ✕
-              </button>
+    <>
+      <div className={`space-y-4 ${className}`}>
+        {/* Add Comment Form */}
+        <form onSubmit={handleSubmitComment} className="space-y-3">
+          {replyToId && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-blue-700">Replying to comment</span>
+                <button
+                  type="button"
+                  onClick={() => setReplyToId(null)}
+                  className="text-blue-700 hover:text-blue-900"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
-          </div>
-        )}
-        
-        <div className="flex gap-3">
-          <div
-            className="user-avatar w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0"
-            data-user-color={getUserById(currentUserId).color}
-          >
-            {getUserById(currentUserId).avatar ? (
-              <img
-                src={getUserById(currentUserId).avatar}
-                alt={getUserById(currentUserId).name}
-                className="w-full h-full rounded-full object-cover"
-              />
-            ) : (
-              <span>{getUserById(currentUserId).name.charAt(0).toUpperCase()}</span>
-            )}
-          </div>
-          
-          <div className="flex-1">
-            <textarea
-              ref={textareaRef}
-              value={newComment}
-              onChange={(e) => {
-                setNewComment(e.target.value);
-                adjustTextareaHeight(e.target);
-              }}
-              placeholder={replyToId ? "Write a reply..." : "Add a comment..."}
-              className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              rows={1}
-            />
-            
-            <div className="flex justify-between items-center mt-2">
-              <span className="text-sm text-gray-500">
-                Use @ to mention users
-              </span>
-              <button
-                type="submit"
-                disabled={!newComment.trim()}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {replyToId ? 'Reply' : 'Comment'}
-              </button>
-            </div>
-          </div>
-        </div>
-      </form>
+          )}
 
-      {/* Comments List */}
-      <div className="space-y-4">
-        {topLevelComments.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <p>No comments yet. Be the first to comment!</p>
+          <div className="flex gap-3">
+            <div
+              className="user-avatar w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0"
+              data-user-color={getUserById(currentUserId).color}
+            >
+              {getUserById(currentUserId).avatar ? (
+                <img
+                  src={getUserById(currentUserId).avatar}
+                  alt={getUserById(currentUserId).name}
+                  className="w-full h-full rounded-full object-cover"
+                />
+              ) : (
+                <span>{getUserById(currentUserId).name.charAt(0).toUpperCase()}</span>
+              )}
+            </div>
+
+            <div className="flex-1">
+              <textarea
+                ref={textareaRef}
+                value={newComment}
+                onChange={(e) => {
+                  setNewComment(e.target.value);
+                  adjustTextareaHeight(e.target);
+                }}
+                placeholder={replyToId ? "Write a reply..." : "Add a comment..."}
+                className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-[#0FC2C0] focus:border-[#0FC2C0] bg-white text-gray-900 placeholder-gray-500 min-h-[42px]"
+                rows={1}
+              />
+
+              <div className="flex justify-between items-center mt-2">
+                <span className="text-sm text-gray-500">Use @ to mention users</span>
+                <button
+                  type="submit"
+                  disabled={!newComment.trim()}
+                  className="px-4 py-2 bg-[#0FC2C0] text-white rounded-lg hover:bg-[#0CABA8] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {replyToId ? 'Reply' : 'Comment'}
+                </button>
+              </div>
+            </div>
           </div>
-        ) : (
-          topLevelComments.map(comment => renderComment(comment))
-        )}
+        </form>
+
+        {/* Comments List */}
+        <div className="space-y-4">
+          {topLevelComments.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <p>No comments yet. Be the first to comment!</p>
+            </div>
+          ) : (
+            topLevelComments.map(comment => renderComment(comment))
+          )}
+        </div>
       </div>
-    </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title={`Delete comment`}
+        description={`Are you sure you want to delete this comment? This action cannot be undone.`}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={async () => {
+          setConfirmOpen(false);
+          if (targetCommentId) await handleDeleteComment(targetCommentId);
+          setTargetCommentId(null);
+        }}
+        onCancel={() => {
+          setConfirmOpen(false);
+          setTargetCommentId(null);
+        }}
+      />
+    </>
   );
 };

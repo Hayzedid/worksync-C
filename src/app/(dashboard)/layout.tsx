@@ -8,6 +8,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { useGlobalPresence } from "../../hooks/collaboration/useGlobalPresence";
 import { GlobalPresenceIndicator } from "../../components/collaboration";
 import { api } from "../../api";
+import ConfirmDialog from "../../components/ConfirmDialog";
 import { 
   LayoutDashboard, 
   CheckSquare, 
@@ -48,6 +49,7 @@ export default function DashboardLayout({
   const auth = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const pathname = usePathname();
 
   // Get current page for presence
@@ -89,11 +91,7 @@ export default function DashboardLayout({
   }
 
   async function handleLogout() {
-    try {
-      await api.post('/auth/logout');
-    } catch {}
-    auth?.refresh();
-    router.replace('/login');
+    setShowLogoutConfirm(true);
   }
 
   return (
@@ -253,6 +251,23 @@ export default function DashboardLayout({
             </div>
           </main>
         </div>
+        
+        <ConfirmDialog
+          open={showLogoutConfirm}
+          title="Log out"
+          description="Are you sure you want to log out?"
+          confirmLabel="Log out"
+          cancelLabel="Cancel"
+          onConfirm={async () => {
+            setShowLogoutConfirm(false);
+            try {
+              await api.post('/auth/logout');
+            } catch {}
+            auth?.refresh();
+            router.replace('/login');
+          }}
+          onCancel={() => setShowLogoutConfirm(false)}
+        />
       </div>
   );
 } 

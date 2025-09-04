@@ -2,11 +2,12 @@
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../../api";
-import { Plus, Trash2, MessageCircle, Users } from "lucide-react";
+import { Plus, Trash2, MessageCircle, ChevronDown } from "lucide-react";
 import { useToast } from "../../../components/toast";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "../../../hooks/useAuth";
+import ConfirmDialog from "../../../components/ConfirmDialog";
 import { 
   ItemPresenceIndicator,
   UniversalComments,
@@ -24,6 +25,57 @@ type Task = {
   workspace?: { id: number; name: string };
 };
 
+const TASK_STATUSES = [
+  { value: 'todo', label: 'To Do', color: 'bg-gray-100 text-gray-800' },
+  { value: 'in_progress', label: 'In Progress', color: 'bg-blue-100 text-blue-800' },
+  { value: 'review', label: 'Review', color: 'bg-yellow-100 text-yellow-800' },
+  { value: 'done', label: 'Done', color: 'bg-green-100 text-green-800' },
+  { value: 'cancelled', label: 'Cancelled', color: 'bg-red-100 text-red-800' }
+];
+
+function TaskStatusDropdown({ task, onStatusChange }: { task: Task; onStatusChange: (taskId: number, newStatus: string) => void }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const currentStatus = TASK_STATUSES.find(s => s.value === task.status) || TASK_STATUSES[0];
+
+  const handleStatusSelect = async (newStatus: string) => {
+    setIsOpen(false);
+    await onStatusChange(task.id, newStatus);
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="text-[#015958] font-medium cursor-pointer hover:text-[#0FC2C0] flex items-center gap-1"
+      >
+        {task.title}
+        <ChevronDown size={14} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-1 bg-white border border-[#0CABA8]/30 rounded-lg shadow-lg z-50 min-w-[150px]">
+          <div className="py-1">
+            {TASK_STATUSES.map((status) => (
+              <button
+                key={status.value}
+                onClick={() => handleStatusSelect(status.value)}
+                className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 ${
+                  task.status === status.value ? 'bg-blue-50' : ''
+                }`}
+              >
+                <span className={`px-2 py-1 rounded-full text-xs ${status.color}`}>
+                  {status.label}
+                </span>
+                {task.status === status.value && <span className="text-blue-600">✓</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function resolveField(obj: unknown, ...keys: string[]) {
   const o = obj as Record<string, unknown> | null;
   if (!o) return undefined;
@@ -40,6 +92,8 @@ export default function TasksPage() {
   const searchParams = useSearchParams();
   const wsParam = searchParams.get("ws");
   const [expandedComments, setExpandedComments] = useState<Set<number>>(new Set());
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [targetTask, setTargetTask] = useState<{ id: number; title?: string } | null>(null);
   
   // Initialize presence tracking for tasks page
   const { presence, setActivityStatus } = useGlobalPresence(
@@ -47,11 +101,13 @@ export default function TasksPage() {
     auth?.user?.name || 'Guest',
     'tasks'
   );
+  
   const wsIdFromUrl = (() => {
     if (!wsParam) return null;
     const n = parseInt(wsParam, 10);
     return Number.isFinite(n) ? n : null;
   })();
+  
   const [currentWsId, setCurrentWsId] = useState<number | null>(() => {
     if (typeof window !== "undefined") {
       const stored = sessionStorage.getItem("current_workspace_id");
@@ -62,22 +118,27 @@ export default function TasksPage() {
     }
     return null;
   });
+  
   useEffect(() => {
     if (wsIdFromUrl != null) {
       setCurrentWsId(wsIdFromUrl);
       if (typeof window !== "undefined") sessionStorage.setItem("current_workspace_id", String(wsIdFromUrl));
     }
   }, [wsIdFromUrl]);
+  
   const effectiveWsId = wsIdFromUrl ?? currentWsId;
+  
   const { data, isLoading, isError, error } = useQuery<unknown>({
     queryKey: ["tasks"],
     queryFn: () => api.get("/tasks"),
   });
+  
   // Also fetch projects to resolve names when tasks only provide projectId
   const { data: projectsData } = useQuery<unknown>({
     queryKey: ["projects"],
     queryFn: () => api.get("/projects"),
   });
+  
   const tasks: Task[] = Array.isArray(data)
     ? (data as Task[])
     : (data && typeof data === 'object' && Array.isArray((data as Record<string, unknown>)['tasks']))
@@ -93,12 +154,14 @@ export default function TasksPage() {
     const n = typeof raw === 'string' ? parseInt(raw, 10) : raw;
     return typeof n === 'number' && Number.isFinite(n) ? (n as number) : null;
   };
+  
   // Build a lookup for project names from projectsData
   const projectList: unknown[] = Array.isArray(projectsData)
     ? (projectsData as unknown[])
     : (projectsData && typeof projectsData === 'object' && Array.isArray((projectsData as Record<string, unknown>)['projects']))
     ? ((projectsData as Record<string, unknown>)['projects'] as unknown[])
     : [];
+    
   const projectNameById: Record<string, string> = projectList.reduce<Record<string, string>>((acc, p: unknown) => {
     const pp = p as Record<string, unknown> | null;
     const id = pp?.['id'] ?? pp?.['projectId'] ?? pp?.['project_id'];
@@ -114,7 +177,7 @@ export default function TasksPage() {
     if (pid != null) {
       const fromMap = projectNameById[String(pid)];
       if (fromMap) return fromMap;
-      return `Project #${pid}`;
+      return "Untitled Project";
     }
     return "General";
   };
@@ -123,12 +186,13 @@ export default function TasksPage() {
   const toWsId = (t: unknown): number | null => {
     const tt = t as Record<string, unknown> | null;
     if (!tt) return null;
-  const project = tt.project as Record<string, unknown> | undefined;
-  const workspace = (project?.workspace as Record<string, unknown> | undefined) ?? (tt.workspace as Record<string, unknown> | undefined);
-  const raw = resolveField(workspace, 'id') ?? resolveField(project, 'workspaceId') ?? resolveField(project, 'workspace_id') ?? resolveField(tt.workspace, 'id') ?? resolveField(tt, 'workspaceId') ?? resolveField(tt, 'workspace_id');
+    const project = tt.project as Record<string, unknown> | undefined;
+    const workspace = (project?.workspace as Record<string, unknown> | undefined) ?? (tt.workspace as Record<string, unknown> | undefined);
+    const raw = resolveField(workspace, 'id') ?? resolveField(project, 'workspaceId') ?? resolveField(project, 'workspace_id') ?? resolveField(tt.workspace, 'id') ?? resolveField(tt, 'workspaceId') ?? resolveField(tt, 'workspace_id');
     const n = typeof raw === 'string' ? parseInt(raw, 10) : raw;
     return typeof n === 'number' && Number.isFinite(n) ? (n as number) : null;
   };
+  
   const toWsName = (t: unknown): string | null => {
     const tt = t as Record<string, unknown> | null;
     const project = tt?.project as Record<string, unknown> | undefined;
@@ -137,8 +201,11 @@ export default function TasksPage() {
     return null;
   };
 
+  // Separate general tasks from project tasks
   const generalTasks = tasks.filter(t => toPid(t) == null);
   const projectTasks = tasks.filter(t => toPid(t) != null);
+  
+  // Group project tasks by project
   const groupedByProject = projectTasks.reduce<Record<string, { projectName: string; projectId: number; items: Task[] }>>((acc, t) => {
     const pid = toPid(t)!;
     const pname = toPname(t, pid);
@@ -161,149 +228,153 @@ export default function TasksPage() {
     }
   }
 
+  function openDeleteConfirm(id: number, title?: string) {
+    setTargetTask({ id, title });
+    setConfirmOpen(true);
+  }
+
+  async function handleStatusChange(taskId: number, newStatus: string) {
+    try {
+      await api.put(`/tasks/${taskId}`, { status: newStatus });
+      await qc.invalidateQueries({ queryKey: ["tasks"] });
+      await qc.refetchQueries({ queryKey: ["tasks"] });
+      addToast({ title: "Task status updated", variant: "success" });
+    } catch (err: unknown) {
+      const maybe = (err as Record<string, unknown>)?.message;
+      const msg = typeof maybe === 'string' ? maybe : "Failed to update task status";
+      addToast({ title: "Failed to update task", description: msg, variant: "error" });
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#F6FFFE] p-8">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold text-[#0FC2C0]">Tasks</h1>
-          <Link href={effectiveWsId != null ? `/tasks/new?ws=${effectiveWsId}` : "/tasks/new"} className="flex items-center gap-2 px-4 py-2 bg-[#0FC2C0] text-white rounded hover:bg-[#0CABA8] transition-colors font-semibold"><Plus className="h-4 w-4" /> New Task</Link>
+          <Link href={effectiveWsId != null ? `/tasks/new?ws=${effectiveWsId}` : "/tasks/new"} className="flex items-center gap-2 px-4 py-2 bg-[#0FC2C0] text-white rounded hover:bg-[#0CABA8] transition-colors font-semibold">
+            <Plus className="h-4 w-4" /> New Task
+          </Link>
         </div>
+        
         {isLoading && <div className="text-[#015958]">Loading...</div>}
         {isError && (
           <div className="text-red-500">
             Failed to load tasks{(error && typeof (error as unknown as Record<string, unknown>)['message'] === 'string') ? `: ${String((error as unknown as Record<string, unknown>)['message'])}` : ''}
           </div>
         )}
-        {/* General tasks grouped (by workspace) */}
-        {(() => {
-          const grouped = generalTasks.reduce<Record<string, { wsName: string | null; wsId: number | null; items: Task[] }>>((acc, t) => {
-            const wsName = toWsName(t);
-            const wsId = toWsId(t);
-            const key = wsName ? `name:${wsName}` : wsId != null ? `id:${wsId}` : 'none';
-            if (!acc[key]) acc[key] = { wsName: wsName ?? null, wsId: wsId ?? null, items: [] };
-            acc[key].items.push(t);
-            return acc;
-          }, {});
-          const groups = Object.values(grouped);
-          return groups.length ? (
-            <div className="space-y-6 mb-8">
-              {groups.map((group, idx) => (
-                <div key={idx} className="bg-white rounded-xl shadow border border-[#0CABA8]/20 p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="text-[#0FC2C0] font-semibold">General</div>
-                    {(group.wsName || group.wsId != null) && (
-                      <span className="text-xs bg-[#F6FFFE] border border-[#0CABA8]/40 text-[#015958] px-2 py-1 rounded">
-                        Workspace: {group.wsName ?? `#${group.wsId}`}
-                      </span>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {group.items.map(t => (
-                      <div key={t.id} className="border border-[#0CABA8]/20 rounded-md p-4 relative">
-                        {/* Realtime Reactions Overlay */}
-                        <RealtimeReactions
-                          itemType="task"
-                          itemId={t.id.toString()}
-                          currentUserId={auth?.user?.id?.toString() || ''}
-                          currentUserName={auth?.user?.name || 'Guest'}
-                          className="absolute inset-0 rounded-md"
+
+        {/* General tasks first */}
+        <div className="mb-8">
+          <h2 className="text-xl font-bold text-[#0FC2C0] mb-3">General Tasks</h2>
+          {generalTasks.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+              {generalTasks.map(t => (
+                <div key={t.id} className="border border-[#0CABA8]/20 rounded-md p-4 relative bg-white">
+                  <RealtimeReactions
+                    itemType="task"
+                    itemId={t.id.toString()}
+                    currentUserId={auth?.user?.id?.toString() || ''}
+                    currentUserName={auth?.user?.name || 'Guest'}
+                    className="absolute inset-0 rounded-md"
+                  />
+                  <div className="relative z-10">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <TaskStatusDropdown 
+                          task={t} 
+                          onStatusChange={handleStatusChange}
                         />
+                        <div className="text-xs text-[#0CABA8] mt-1">{t.status}</div>
                         
-                        <div className="relative z-10">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex-1">
-                              <div 
-                                className="text-[#015958] font-medium cursor-pointer hover:text-[#0FC2C0]"
-                                onClick={() => setActivityStatus('task', t.id.toString(), 'viewing')}
-                              >
-                                {t.title}
-                              </div>
-                              <div className="text-xs text-[#0CABA8] mt-1">{t.status}</div>
-                              
-                              {/* Presence Indicator */}
-                              <div className="mt-2">
-                                <ItemPresenceIndicator
-                                  users={presence.users}
-                                  currentUserId={auth?.user?.id?.toString() || ''}
-                                  itemType="task"
-                                  itemId={t.id.toString()}
-                                  className="mb-2"
-                                />
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => {
-                                  const newExpanded = new Set(expandedComments);
-                                  if (newExpanded.has(t.id)) {
-                                    newExpanded.delete(t.id);
-                                  } else {
-                                    newExpanded.add(t.id);
-                                  }
-                                  setExpandedComments(newExpanded);
-                                }}
-                                className="text-[#0FC2C0] hover:text-[#0CABA8]"
-                                title="Toggle comments"
-                              >
-                                <MessageCircle className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteTask(t.id)}
-                                className="text-red-600 hover:text-red-700"
-                                type="button"
-                                aria-label="Delete task"
-                                title="Delete task"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
+                        {/* Workspace badge if available */}
+                        {toWsName(t) && (
+                          <div className="mt-2">
+                            <span className="text-xs bg-[#F6FFFE] border border-[#0CABA8]/40 text-[#015958] px-2 py-1 rounded">
+                              Workspace: {toWsName(t)}
+                            </span>
                           </div>
-                          
-                          {/* Expanded Comments */}
-                          {expandedComments.has(t.id) && auth?.user && (
-                            <div className="mt-4 border-t border-[#0CABA8]/20 pt-4">
-                              <UniversalComments
-                                itemType="task"
-                                itemId={t.id.toString()}
-                                currentUserId={auth.user.id.toString()}
-                                currentUserName={auth.user.name || 'User'}
-                                users={presence.users}
-                                className="max-h-60 overflow-y-auto"
-                              />
-                            </div>
-                          )}
+                        )}
+                        
+                        {/* Presence Indicator */}
+                        <div className="mt-2">
+                          <ItemPresenceIndicator
+                            users={presence.users}
+                            currentUserId={auth?.user?.id?.toString() || ''}
+                            itemType="task"
+                            itemId={t.id.toString()}
+                            className="mb-2"
+                          />
                         </div>
                       </div>
-                    ))}
+                      
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            const newExpanded = new Set(expandedComments);
+                            if (newExpanded.has(t.id)) {
+                              newExpanded.delete(t.id);
+                            } else {
+                              newExpanded.add(t.id);
+                            }
+                            setExpandedComments(newExpanded);
+                          }}
+                          className="text-[#0FC2C0] hover:text-[#0CABA8]"
+                          title="Toggle comments"
+                        >
+                          <MessageCircle className="icon-comment" />
+                        </button>
+                        <button
+                          onClick={() => openDeleteConfirm(t.id, t.title)}
+                          className="text-red-600 hover:text-red-700"
+                          type="button"
+                          aria-label="Delete task"
+                          title="Delete task"
+                        >
+                          <Trash2 className="icon-delete" />
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {/* Expanded Comments */}
+                    {expandedComments.has(t.id) && auth?.user && (
+                      <div className="mt-4 border-t border-[#0CABA8]/20 pt-4">
+                        <UniversalComments
+                          itemType="task"
+                          itemId={t.id.toString()}
+                          currentUserId={auth.user.id.toString()}
+                          currentUserName={auth.user.name || `${auth.user.firstName} ${auth.user.lastName}` || 'User'}
+                          users={presence.users}
+                          className="max-h-60 overflow-y-auto"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            !isLoading && !isError ? (
-              <div className="text-[#0CABA8] mb-8">No general tasks.</div>
-            ) : null
-          );
-        })()}
+            !isLoading && !isError && (
+              <div className="text-[#0CABA8]">No general tasks.</div>
+            )
+          )}
+        </div>
 
-        {/* Tasks under projects */}
+        {/* Tasks in workspace projects */}
         <div className="space-y-6">
           {Object.values(groupedByProject).map(group => (
             <div key={group.projectId} className="bg-white rounded-xl shadow border border-[#0CABA8]/20 p-4">
               <div className="flex items-center justify-between mb-3">
                 <Link href={effectiveWsId != null ? `/projects/${group.projectId}?ws=${effectiveWsId}` : `/projects/${group.projectId}`} className="text-[#0FC2C0] font-semibold hover:underline">
-                  {group.projectName}
+                  Tasks in project: {group.projectName}
                 </Link>
                 <div className="flex items-center gap-2">
                   {/* Workspace badge from first task if available */}
                   {(() => {
                     const sample = group.items[0];
                     const wsName = toWsName(sample);
-                    const wsId = toWsId(sample);
-                    return wsName || wsId != null ? (
+                    return wsName ? (
                       <span className="text-xs bg-[#F6FFFE] border border-[#0CABA8]/40 text-[#015958] px-2 py-1 rounded">
-                        Workspace: {wsName ?? `#${wsId}`}
+                        Workspace: {wsName}
                       </span>
                     ) : null;
                   })()}
@@ -317,10 +388,9 @@ export default function TasksPage() {
                   </Link>
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
                 {group.items.map(t => (
                   <div key={t.id} className="border border-[#0CABA8]/20 rounded-md p-4 relative">
-                    {/* Realtime Reactions Overlay */}
                     <RealtimeReactions
                       itemType="task"
                       itemId={t.id.toString()}
@@ -332,12 +402,10 @@ export default function TasksPage() {
                     <div className="relative z-10">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1">
-                          <div 
-                            className="text-[#015958] font-medium cursor-pointer hover:text-[#0FC2C0]"
-                            onClick={() => setActivityStatus('task', t.id.toString(), 'viewing')}
-                          >
-                            {t.title}
-                          </div>
+                          <TaskStatusDropdown 
+                            task={t} 
+                            onStatusChange={handleStatusChange}
+                          />
                           <div className="text-xs text-[#0CABA8] mt-1">{t.status}</div>
                           
                           {/* Presence Indicator */}
@@ -350,14 +418,6 @@ export default function TasksPage() {
                               className="mb-2"
                             />
                           </div>
-                          
-                          {(toWsName(t) || toWsId(t) != null) && (
-                            <div className="mt-2">
-                              <span className="inline-block text-[10px] bg-[#F6FFFE] border border-[#0CABA8]/40 text-[#015958] px-2 py-0.5 rounded">
-                                Workspace: {toWsName(t) ?? `#${toWsId(t)}`}
-                              </span>
-                            </div>
-                          )}
                         </div>
                         
                         <div className="flex items-center gap-2">
@@ -374,16 +434,16 @@ export default function TasksPage() {
                             className="text-[#0FC2C0] hover:text-[#0CABA8]"
                             title="Toggle comments"
                           >
-                            <MessageCircle className="h-4 w-4" />
+                            <MessageCircle className="icon-comment" />
                           </button>
                           <button
-                            onClick={() => handleDeleteTask(t.id)}
+                            onClick={() => openDeleteConfirm(t.id, t.title)}
                             className="text-red-600 hover:text-red-700"
                             type="button"
                             aria-label="Delete task"
                             title="Delete task"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="icon-delete" />
                           </button>
                         </div>
                       </div>
@@ -395,7 +455,7 @@ export default function TasksPage() {
                             itemType="task"
                             itemId={t.id.toString()}
                             currentUserId={auth.user.id.toString()}
-                            currentUserName={auth.user.name || 'User'}
+                            currentUserName={auth.user.name || `${auth.user.firstName} ${auth.user.lastName}` || 'User'}
                             users={presence.users}
                             className="max-h-60 overflow-y-auto"
                           />
@@ -412,6 +472,23 @@ export default function TasksPage() {
           )}
         </div>
       </div>
+      
+      <ConfirmDialog
+        open={confirmOpen}
+        title={`Delete task${targetTask?.title ? ` '${targetTask.title}'` : ''}`}
+        description="This action will permanently remove the task. This cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={async () => {
+          setConfirmOpen(false);
+          if (targetTask?.id) await handleDeleteTask(targetTask.id);
+          setTargetTask(null);
+        }}
+        onCancel={() => {
+          setConfirmOpen(false);
+          setTargetTask(null);
+        }}
+      />
     </div>
   );
 }

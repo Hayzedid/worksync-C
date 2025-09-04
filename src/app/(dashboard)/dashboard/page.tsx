@@ -49,6 +49,15 @@ interface Activity {
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  // Dynamic header message templates that include a {name} placeholder
+  const dynamicHeaderMessages = [
+    'What are we working on today, {name}?',
+    'Ready to make your work process easier, {name}?',
+    'A fresh look at your tasks and projects for you, {name}.',
+    'New day, new goals — let\'s prioritize them, {name}.',
+    'Quick snapshot of your work and activity, {name}.'
+  ];
+  const [dynamicHeader, setDynamicHeader] = useState<string>('');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
@@ -57,6 +66,11 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+  // Pick a random header template and replace {name} with the authenticated user's first name
+  const displayName = (user && user.firstName) ? user.firstName : 'User';
+  const template = dynamicHeaderMessages[Math.floor(Math.random() * dynamicHeaderMessages.length)];
+  setDynamicHeader(template.replace('{name}', displayName));
+
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
@@ -198,7 +212,7 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold text-[#015958]">
           Welcome back, {user?.firstName || 'User'}!
         </h1>
-        <p className="text-[#0CABA8]">Here's what's happening with your work today.</p>
+  <p className="text-[#0CABA8]">{dynamicHeader || "Here's what's happening with your work today."}</p>
       </div>
 
       {/* Stats Grid */}

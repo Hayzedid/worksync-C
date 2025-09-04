@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Search,
   Filter,
@@ -44,6 +45,8 @@ export function ProjectTemplates({ workspaceId, onCreateProject, className = '' 
     getTemplateAnalytics
   } = useProjectTemplates();
 
+  const router = useRouter();
+
   const [viewMode, setViewMode] = useState<'all' | 'featured' | 'mine'>('featured');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<ProjectTemplate | null>(null);
@@ -81,16 +84,35 @@ export function ProjectTemplates({ workspaceId, onCreateProject, className = '' 
 
   const handleCreateProject = async (template: ProjectTemplate) => {
     try {
+      // Prefer explicit workspaceId prop; if not provided, fall back to sessionStorage's current workspace
+      let targetWorkspaceId = workspaceId;
+      if (!targetWorkspaceId && typeof window !== 'undefined') {
+        const stored = sessionStorage.getItem('current_workspace_id');
+        if (stored) targetWorkspaceId = stored;
+      }
+
+      if (!targetWorkspaceId) {
+        // No workspace context — open workspace chooser UI or surface a clear message instead of silently failing
+        // For now we throw to surface a user-facing error. Caller can replace this with a modal chooser.
+  throw new Error('No workspace selected. Open the Workspace page or provide ?ws=<id> to select a workspace before creating a project.');
+      }
+
       const projectId = await createProjectFromTemplate({
         templateId: template.id,
         name: `${template.name} Project`,
-        workspaceId,
+        workspaceId: targetWorkspaceId,
         startDate: new Date().toISOString(),
         teamMembers: [],
         customizations: {}
       });
-      
       onCreateProject?.(projectId);
+
+      // Navigate to the project details page so user can create tasks and notes immediately
+      try {
+        router.push(`/projects/${projectId}`);
+      } catch (navErr) {
+        // If navigation fails, ignore — caller may handle navigation
+      }
     } catch (err) {
       console.error('Failed to create project from template:', err);
     }

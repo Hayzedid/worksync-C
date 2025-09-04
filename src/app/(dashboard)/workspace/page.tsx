@@ -153,7 +153,17 @@ export default function WorkspacePage() {
 
       {/* Compact lists: Projects and Tasks/Notes */}
       <div className="bg-white rounded-xl shadow p-6 border border-[#0CABA8]/20">
-        <h2 className="text-lg font-bold text-[#0FC2C0] mb-3 flex items-center gap-2"><Folder className="h-5 w-5" /> Projects in this workspace</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-bold text-[#0FC2C0] flex items-center gap-2"><Folder className="h-5 w-5" /> Projects in this workspace</h2>
+          <Link
+            href={newProjectHref}
+            className="inline-flex items-center gap-2 px-3 py-1 rounded bg-[#0FC2C0] text-white hover:bg-[#0CABA8]"
+            title="Create project in this workspace"
+            aria-label="Create project in this workspace"
+          >
+            Create Project
+          </Link>
+        </div>
         {(!projectsList || projectsList.length === 0) ? (
           <div className="text-[#0CABA8] text-sm">No projects yet.</div>
         ) : (

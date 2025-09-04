@@ -2,8 +2,9 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../../../api";
+import { normalizeStatus, statusToRank } from '../../../../lib/status';
 import { Folder, FolderPlus } from "lucide-react";
 
 // Helpers to normalize incoming project shape
@@ -49,6 +50,7 @@ function toPstatus(p: unknown): string {
 export default function WorkspaceProjectsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const wsParam = searchParams.get("ws");
   const wsIdFromUrl = (() => {
     if (!wsParam) return null;
@@ -93,6 +95,14 @@ export default function WorkspaceProjectsPage() {
     staleTime: 60_000,
   });
 
+  // Test query to fetch ALL projects (for debugging)
+  const { data: allProjectsData } = useQuery<unknown>({
+    queryKey: ["projects-all-debug"],
+    queryFn: () => api.get("/projects"),
+    enabled: process.env.NODE_ENV === 'development',
+    staleTime: 0,
+  });
+
   const { data, isLoading, isError } = useQuery<unknown>({
     queryKey: ["projects", { workspace_id: effectiveWsId }],
     queryFn: () => api.get("/projects", { params: { workspace_id: effectiveWsId } }),
@@ -110,13 +120,19 @@ export default function WorkspaceProjectsPage() {
         ? ((data as Record<string, unknown>)['projects'] as unknown[])
         : [];
       
-      return allProjects.map((p: unknown) => ({
-        id: toPid(p)!,
-        name: toPname(p),
-        status: toPstatus(p),
-        wsId: toWsId(p),
-        wsName: toWsName(p),
-      }));
+      return allProjects.map((p: unknown) => {
+        const pp = p as Record<string, unknown> | null;
+        const rawUpdated = pp?.['updatedAt'] ?? pp?.['updated_at'] ?? pp?.['modifiedAt'] ?? pp?.['modified_at'] ?? pp?.['createdAt'] ?? pp?.['created_at'];
+        const updatedAt = rawUpdated ? String(rawUpdated) : null;
+        return {
+          id: toPid(p)!,
+          name: toPname(p),
+          status: toPstatus(p),
+          wsId: toWsId(p),
+          wsName: toWsName(p),
+          updatedAt,
+        };
+      });
     },
     [data]
   );
@@ -196,6 +212,35 @@ export default function WorkspaceProjectsPage() {
     return normalized.filter((p) => p.wsId === effectiveWsId);
   }, [normalized, effectiveWsId]);
 
+  // Sort by status precedence then recency so newly-created projects appear first.
+  // We split non-archived vs archived and render non-archived first.
+  const sortedNonArchived = useMemo(() => {
+    return filtered
+      .filter(p => normalizeStatus(p.status ?? p['state'] ?? p['project_status']) !== 'archived')
+      .slice()
+      .sort((a, b) => {
+        const sa = normalizeStatus(a.status ?? a['state'] ?? a['project_status']);
+        const sb = normalizeStatus(b.status ?? b['state'] ?? b['project_status']);
+        const ra = statusToRank(sa);
+        const rb = statusToRank(sb);
+        if (ra !== rb) return ra - rb;
+        const ta = a.updatedAt ? Date.parse(a.updatedAt) : 0;
+        const tb = b.updatedAt ? Date.parse(b.updatedAt) : 0;
+        return tb - ta; // most recent first
+      });
+  }, [filtered]);
+
+  const sortedArchived = useMemo(() => {
+    return filtered
+      .filter(p => normalizeStatus(p.status ?? p['state'] ?? p['project_status']) === 'archived')
+      .slice()
+      .sort((a, b) => {
+        const ta = a.updatedAt ? Date.parse(a.updatedAt) : 0;
+        const tb = b.updatedAt ? Date.parse(b.updatedAt) : 0;
+        return tb - ta;
+      });
+  }, [filtered]);
+
   const headerLabel = useMemo(() => {
     if (effectiveWsId == null) return "All Workspaces";
     const ws = workspaces.find((w) => w.id === effectiveWsId);
@@ -220,7 +265,7 @@ export default function WorkspaceProjectsPage() {
 
         {effectiveWsId == null && (
           <div className="mb-6 p-4 bg-white border border-[#0CABA8]/30 rounded">
-            <div className="text-[#015958] mb-2">Select a workspace to view projects:</div>
+            <div className="text-[#015958] mb-2">No workspace selected — showing projects across workspaces. To filter, open the Workspace page or append <code>?ws=&lt;id&gt;</code> to the URL.</div>
             <div className="flex items-center gap-3">
                 <select
                   aria-label="Choose workspace"
@@ -300,32 +345,80 @@ export default function WorkspaceProjectsPage() {
 
         {isLoading && <div className="text-[#015958]">Loading...</div>}
         {isError && <div className="text-red-500">Failed to load projects</div>}
+        
+        {/* Debug info */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mb-4 p-4 bg-gray-100 text-sm">
+            <div className="flex justify-between items-start mb-2">
+              <strong>Debug Info:</strong>
+              <button 
+                onClick={() => queryClient.invalidateQueries({ queryKey: ["projects"] })}
+                className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+              >
+                Refresh Data
+              </button>
+            </div>
+            <div>• effectiveWsId = {String(effectiveWsId)}</div>
+            <div>• workspaces.length = {workspaces.length}</div>
+            <div>• filtered.length = {filtered.length}</div>
+            <div>• sortedNonArchived.length = {sortedNonArchived.length}</div>
+            <div>• raw data = {JSON.stringify(data, null, 2)}</div>
+            <div>• normalized = {JSON.stringify(normalized, null, 2)}</div>
+            <div>• query enabled = {String(effectiveWsId != null)}</div>
+            <div>• isLoading = {String(isLoading)}</div>
+            <div>• isError = {String(isError)}</div>
+            <div>• API URL would be: /projects?workspace_id={effectiveWsId}</div>
+            <details className="mt-2">
+              <summary className="cursor-pointer text-blue-600">Show ALL projects (debug)</summary>
+              <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+                <div><strong>ALL projects from /projects:</strong></div>
+                <div>{JSON.stringify(allProjectsData, null, 2)}</div>
+              </div>
+            </details>
+          </div>
+        )}
 
         {/* If multiple workspaces exist but none selected, prompt selection instead of showing all */}
         {workspaces.length > 1 && effectiveWsId == null ? (
-          <div className="text-[#015958] mb-6">Select a workspace to view its projects.</div>
+          <div className="text-[#015958] mb-6">No workspace selected — showing projects across workspaces. To filter, open the Workspace page or append <code>?ws=&lt;id&gt;</code> to the URL.</div>
         ) : null}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {(workspaces.length > 1 && effectiveWsId == null ? [] : filtered).map((p) => (
-            <div key={p.id} className="bg-white rounded-xl shadow p-6 border border-[#0CABA8]/20 hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <Folder className="h-8 w-8 text-[#0FC2C0]" />
-                  <div>
-                    <Link href={`/projects/${p.id}`} className="text-lg font-bold text-[#0FC2C0] hover:underline">
-                      {p.name}
-                    </Link>
-                    <div className="text-xs text-[#0CABA8]">{p.status}</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {sortedNonArchived.map((p) => (
+              <div key={p.id} className="bg-white rounded-xl shadow p-6 border border-[#0CABA8]/20 hover:shadow-md transition-shadow">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <Folder className="h-8 w-8 text-[#0FC2C0]" />
+                    <div>
+                      <Link href={`/projects/${p.id}`} className="text-lg font-bold text-[#0FC2C0] hover:underline">
+                        {p.name}
+                      </Link>
+                      <div className="text-xs text-[#0CABA8]">{(normalizeStatus(p.status) || p.status).toString()}</div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
-          {!isLoading && !isError && (workspaces.length > 1 && effectiveWsId == null ? true : filtered.length === 0) && (
-            <div className="text-[#0CABA8] col-span-full">No projects in this workspace.</div>
-          )}
-        </div>
+            ))}
+
+            {/* Archived shown after non-archived */}
+            {sortedArchived.map((p) => (
+              <div key={`arch-${p.id}`} className="bg-white/60 rounded-xl p-6 border border-[#0CABA8]/10">
+                <div className="flex items-start gap-4">
+                  <Folder className="h-8 w-8 text-gray-400" />
+                  <div>
+                    <Link href={`/projects/${p.id}`} className="text-lg font-bold text-gray-600 hover:underline">
+                      {p.name}
+                    </Link>
+                    <div className="text-xs text-gray-500">{(normalizeStatus(p.status) || p.status).toString()}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {!isLoading && !isError && filtered.length === 0 && (
+              <div className="text-[#0CABA8] col-span-full">No projects in this workspace.</div>
+            )}
+          </div>
       </div>
     </div>
   );

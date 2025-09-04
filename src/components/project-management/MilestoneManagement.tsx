@@ -491,7 +491,7 @@ function MilestoneKanban({ milestones, onMilestoneSelect, onMilestoneUpdate, onM
                         title="Delete milestone"
                         aria-label="Delete milestone"
                       >
-                        <Trash2 size={14} />
+                        <Trash2 className="icon-delete" />
                       </button>
                     </div>
                   </div>
@@ -631,7 +631,7 @@ function MilestoneList({ milestones, onMilestoneSelect, onMilestoneUpdate, onMil
                 title="Delete milestone"
                 aria-label="Delete milestone"
               >
-                <Trash2 size={14} />
+                <Trash2 className="icon-delete" />
               </button>
             </div>
           </div>
@@ -746,7 +746,7 @@ function MilestoneDetailSidebar({
                         title="Remove deliverable"
                         aria-label="Remove deliverable"
                       >
-                        <Trash2 size={12} />
+                        <Trash2 className="icon-delete" />
                       </button>
                     </div>
                   </div>

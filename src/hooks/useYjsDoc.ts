@@ -1,6 +1,6 @@
 
 import { useEffect, useRef } from 'react';
-import * as Y from 'yjs';
+import Y, { Y as Yns } from '../lib/singleYjs';
 import { WebsocketProvider } from 'y-websocket';
 
 /**

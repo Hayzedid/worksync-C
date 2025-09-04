@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
+import Link from "next/link";
 import { CollaborativeRichTextEditor } from "../../../../components/CollaborativeRichTextEditor";
-import * as Y from 'yjs';
+import Y, { Y as Yns } from '../../../../lib/singleYjs';
 import { WebsocketProvider } from 'y-websocket';
 import { useParams } from "next/navigation";
 import { api } from "../../../../api";
@@ -42,6 +43,7 @@ export default function NoteCollaborativePage() {
   const socket = useSocket();
   const [content, setContent] = useState("");
   const [title, setTitle] = useState("");
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [presence, setPresence] = useState<{ userName: string; typing: boolean; color: string }[]>([]);
   const [isTyping, setIsTyping] = useState(false);
 
@@ -74,17 +76,25 @@ export default function NoteCollaborativePage() {
     // initial check
     updateStacks();
 
-    // Sync initial content from backend only if empty
-    api.get(`/notes/${id}`)
-      .then((data) => {
+    // Sync initial content from backend only if empty (extract to allow retry)
+    const fetchNote = async () => {
+      try {
+        const data = await api.get(`/notes/${id}`);
         setTitle(data.title);
         if (ytext.length === 0 && data.content) {
           ytext.insert(0, data.content);
         }
         setHistory([{ title: data.title, content: data.content, user: 'Initial', time: new Date().toLocaleTimeString() }]);
         setHistoryIndex(0);
-      })
-      .catch(() => addToast({ title: "Failed to load note", variant: "error" }));
+        setLoadError(null);
+      } catch (err: unknown) {
+        const maybe = (err as Record<string, unknown>)?.message ?? String(err);
+        setLoadError(String(maybe));
+        console.error("Failed to load note:", err);
+        addToast({ title: "Failed to load note", description: String(maybe), variant: "error" });
+      }
+    };
+    void fetchNote();
 
     // Listen for Yjs content changes
     const updateContent = () => setContent(ytext.toString());
@@ -190,11 +200,36 @@ export default function NoteCollaborativePage() {
 
   return (
     <div className="max-w-2xl mx-auto p-8">
-      <h1 className="text-2xl font-bold mb-4">Collaborative Note</h1>
+      <div className="flex items-center gap-4 mb-6">
+        <Link 
+          href="/notes"
+          className="inline-flex items-center gap-2 px-3 py-2 rounded bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0CABA8]"
+        >
+          ← Back to Notes
+        </Link>
+        <h1 className="text-2xl font-bold text-gray-900">Collaborative Note</h1>
+      </div>
+      {loadError && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded">
+          <div className="font-semibold">Failed to load note</div>
+          <div className="text-sm mt-1 break-words">{loadError}</div>
+          <div className="mt-3 flex items-center gap-2">
+            <button onClick={() => { setLoadError(null); /* re-run the effect by reloading the page */ window.location.reload(); }} className="px-3 py-1 rounded bg-[#015958] text-white hover:bg-[#0CABA8] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0CABA8]">Retry</button>
+            {/* If the error indicates the note is missing, offer a safe back link */}
+            {String(loadError).toLowerCase().includes('not found') && (
+              <Link href="/notes" className="px-3 py-1 rounded border border-gray-300 bg-white text-gray-900 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0CABA8]">Back to notes</Link>
+            )}
+            {/* If unauthorized, offer sign-in */}
+            {String(loadError).toLowerCase().includes('unauthorized') && (
+              <Link href="/login" className="px-3 py-1 rounded bg-white border border-[#015958] text-[#015958] hover:bg-[#0CABA8] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0CABA8]">Sign in</Link>
+            )}
+          </div>
+        </div>
+      )}
       <div className="flex gap-4 mb-4">
-  <button onClick={handleUndo} disabled={!canUndo} className="px-2 py-1 rounded bg-gray-200 disabled:opacity-50">Undo</button>
-  <button onClick={handleRedo} disabled={!canRedo} className="px-2 py-1 rounded bg-gray-200 disabled:opacity-50">Redo</button>
-  <button onClick={() => setShowHistory(h => !h)} className="px-2 py-1 rounded bg-gray-200">History</button>
+  <button onClick={handleUndo} disabled={!canUndo} className="px-2 py-1 rounded bg-[#015958] text-white disabled:opacity-50 hover:bg-[#0CABA8] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0CABA8]">Undo</button>
+  <button onClick={handleRedo} disabled={!canRedo} className="px-2 py-1 rounded bg-[#015958] text-white disabled:opacity-50 hover:bg-[#0CABA8] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0CABA8]">Redo</button>
+  <button onClick={() => setShowHistory(h => !h)} className="px-2 py-1 rounded bg-[#015958] text-white hover:bg-[#0CABA8] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0CABA8]">History</button>
       </div>
       <LiveCursors
         noteId={String(id)}
@@ -203,28 +238,30 @@ export default function NoteCollaborativePage() {
         textareaRef={contentRef}
         cursors={cursors}
       />
-      <div className="mb-2 text-sm text-[#0FC2C0] flex flex-wrap gap-2">
+      <div className="mb-2 text-sm flex flex-wrap gap-2 bg-white p-1 rounded">
         {presence.map((u, i) => (
-          <span key={i} className={u.color === '#0FC2C0' ? 'text-[#0FC2C0]' : u.color === '#0CABA8' ? 'text-[#0CABA8]' : u.color === '#008F8C' ? 'text-[#008F8C]' : u.color === '#015958' ? 'text-[#015958]' : u.color === '#F95738' ? 'text-[#F95738]' : ''}>
+          <span key={i} className={u.color === '#015958' ? 'text-[#015958]' : (u.color === '#0CABA8' || u.color === '#0FC2C0' || u.color === '#008F8C') ? 'text-[#0CABA8]' : u.color === '#F95738' ? 'text-[#F95738]' : 'text-gray-900'}>
             {u.userName} {u.typing ? <em>is typing…</em> : "is viewing"}
           </span>
         ))}
       </div>
       <NoteChat noteId={String(id)} userId={localUserId} userName={localUserName} />
       <input
-        className="w-full border rounded p-2 mb-4"
+        className="w-full border border-gray-300 rounded p-2 mb-4 bg-white text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0CABA8]"
         value={title}
         onChange={e => handleEdit("title", e.target.value)}
         placeholder="Note title"
       />
+      <div className="border border-gray-300 rounded p-2 bg-white">
       <CollaborativeRichTextEditor
-        docId={String(id)}
-        userName={localUserName}
-        userColor="#0FC2C0"
+      docId={String(id)}
+      userName={localUserName}
+      userColor="#0CABA8"
   externalYdoc={ydocRef.current ?? undefined}
   externalProvider={yProviderRef.current ?? undefined}
   externalUndoManager={undoManagerRef.current ?? undefined}
-      />
+    />
+      </div>
       {/* Version History Sidebar */}
       {showHistory && (
         <div className="fixed top-0 right-0 w-80 h-full bg-white border-l border-gray-200 shadow-lg p-4 overflow-y-auto z-50">
@@ -243,12 +280,12 @@ export default function NoteCollaborativePage() {
                     socket.emit("note:edit", { noteId: id, field: "title", value: h.title, userName: localUserName });
                     socket.emit("note:edit", { noteId: id, field: "content", value: h.content, userName: localUserName });
                   }
-                }} className="text-[#0FC2C0] underline text-xs">Restore</button>
+                }} className="text-[#015958] underline text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0CABA8]">Restore</button>
                 <hr className="my-1" />
               </li>
             ))}
           </ul>
-          <button onClick={() => setShowHistory(false)} className="mt-2 px-2 py-1 rounded bg-gray-200">Close</button>
+          <button onClick={() => setShowHistory(false)} className="mt-2 px-2 py-1 rounded bg-[#015958] text-white hover:bg-[#0CABA8] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0CABA8]">Close</button>
         </div>
       )}
     </div>

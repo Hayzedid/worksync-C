@@ -39,12 +39,22 @@ export function useUniversalComments(
     if (!socket || !itemId) return;
 
     setLoading(true);
+    console.log(`Loading comments for ${itemType}:${itemId}`);
     
     // Request comments for this item
     socket.emit('comments:load', { itemType, itemId });
 
+    // Add a timeout fallback - if no response in 3 seconds, assume no backend support
+    const timeout = setTimeout(() => {
+      console.log(`Comments timeout for ${itemType}:${itemId} - assuming no backend support`);
+      setLoading(false);
+      setComments([]); // Set empty comments array
+    }, 3000);
+
     // Listen for comment updates
     const handleCommentsLoaded = (data: { comments: UniversalComment[] }) => {
+      console.log(`Comments loaded for ${itemType}:${itemId}`, data.comments);
+      clearTimeout(timeout);
       setComments(data.comments.map(comment => ({
         ...comment,
         createdAt: new Date(comment.createdAt),
@@ -95,6 +105,7 @@ export function useUniversalComments(
     socket.on('comments:typing', handleTypingUpdate);
 
     return () => {
+      clearTimeout(timeout);
       socket.off('comments:loaded', handleCommentsLoaded);
       socket.off('comments:new', handleNewComment);
       socket.off('comments:updated', handleCommentUpdated);
@@ -116,36 +127,69 @@ export function useUniversalComments(
 
   // Add new comment
   const addComment = useCallback((content: string, parentId?: string) => {
-    if (!socket || !content.trim()) return;
+    console.log('addComment called:', { socket: !!socket, content, parentId });
+    
+    if (!content.trim()) {
+      console.log('Empty content, skipping');
+      return;
+    }
 
-    const mentions = extractMentions(content);
-    const comment: Omit<UniversalComment, 'id' | 'createdAt'> = {
+    // Always create a local comment for immediate feedback
+    const tempComment: UniversalComment = {
+      id: `temp-${Date.now()}`,
       itemType,
       itemId,
       userId,
       userName,
       content: content.trim(),
       parentId,
-      mentions,
+      mentions: [],
       reactions: {},
       isEdited: false,
+      createdAt: new Date(),
     };
+    
+    console.log('Creating temporary comment:', tempComment);
+    setComments(prev => {
+      const newComments = [...prev, tempComment];
+      console.log('Updated comments array:', newComments);
+      return newComments;
+    });
 
-    socket.emit('comments:add', comment);
-
-    // Send mention notifications
-    mentions.forEach(mentionedUser => {
-      socket.emit('notification:mention', {
-        toUserName: mentionedUser,
-        fromUserId: userId,
-        fromUserName: userName,
+    // If socket is available, also send to backend
+    if (socket) {
+      console.log('Socket available, also emitting to backend');
+      const mentions = extractMentions(content);
+      const comment: Omit<UniversalComment, 'id' | 'createdAt'> = {
         itemType,
         itemId,
-        message: `${userName} mentioned you in a comment`,
-        content: content.substring(0, 100),
+        userId,
+        userName,
+        content: content.trim(),
+        parentId,
+        mentions,
+        reactions: {},
+        isEdited: false,
+      };
+
+      socket.emit('comments:add', comment);
+
+      // Send mention notifications
+      mentions.forEach(mentionedUser => {
+        socket.emit('notification:mention', {
+          toUserName: mentionedUser,
+          fromUserId: userId,
+          fromUserName: userName,
+          itemType,
+          itemId,
+          message: `${userName} mentioned you in a comment`,
+          content: content.substring(0, 100),
+        });
       });
-    });
-  }, [socket, itemType, itemId, userId, userName, extractMentions]);
+    } else {
+      console.log('No socket connection, using local comment only');
+    }
+  }, [socket, itemType, itemId, userId, userName, extractMentions, setComments]);
 
   // Update comment
   const updateComment = useCallback((commentId: string, content: string) => {

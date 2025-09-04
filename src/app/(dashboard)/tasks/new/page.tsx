@@ -8,7 +8,7 @@ import { useToast } from "../../../../components/toast";
 
 export default function NewTaskPage() {
   const [title, setTitle] = useState("");
-  const [status, setStatus] = useState("Pending");
+  const [status, setStatus] = useState("todo");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -70,9 +70,11 @@ export default function NewTaskPage() {
           <div>
             <label className="block text-[#015958] font-semibold mb-1">Status</label>
               <select aria-label="Task status" value={status} onChange={e => setStatus(e.target.value)} className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]">
-              <option>Pending</option>
-              <option>In Progress</option>
-              <option>Completed</option>
+              <option value="todo">To do</option>
+              <option value="in_progress">In Progress</option>
+              <option value="review">Review</option>
+              <option value="done">Done</option>
+              <option value="cancelled">Cancelled</option>
             </select>
           </div>
           {error && <div className="text-red-500">{error}</div>}

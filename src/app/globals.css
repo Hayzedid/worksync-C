@@ -153,3 +153,16 @@ body {
 .fc .fc-list-event:hover {
   background: #0b6d6c;
 }
+
+/* Global icon utilities */
+.icon-comment {
+  width: 28px !important; /* larger size */
+  height: 28px !important;
+  transform: translateY(15px) !important;
+}
+
+.icon-delete {
+  width: 28px !important;
+  height: 28px !important;
+  transform: translateY(15px) !important;
+}

@@ -75,79 +75,181 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0FC2C0] via-[#0CABA8] to-[#023535]">
-      <form onSubmit={handleSubmit} className="max-w-md w-full p-8 bg-white/90 rounded-xl shadow-2xl border border-[#0CABA8]/30 backdrop-blur-md">
-        <h1 className="text-2xl font-bold mb-4 text-[#0FC2C0]">Register</h1>
-        <label htmlFor="reg-username" className="sr-only">Username</label>
-        <input id="reg-username" name="username" autoComplete="username" className="w-full mb-3 px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" placeholder="Username" value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} required />
-        <label htmlFor="reg-first-name" className="sr-only">First Name</label>
-        <input id="reg-first-name" name="firstName" autoComplete="given-name" className="w-full mb-3 px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" placeholder="First Name" value={form.firstName} onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))} required />
-        <label htmlFor="reg-last-name" className="sr-only">Last Name</label>
-        <input id="reg-last-name" name="lastName" autoComplete="family-name" className="w-full mb-3 px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" placeholder="Last Name" value={form.lastName} onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))} required />
-        <label htmlFor="reg-email" className="sr-only">Email</label>
-        <input id="reg-email" name="email" autoComplete="email" className="w-full mb-3 px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" placeholder="Email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} required />
-        <div className="relative mb-3">
-          <label htmlFor="reg-password" className="sr-only">Password</label>
-          <input
-            className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE] pr-10"
-            type={showPassword ? "text" : "password"}
-            placeholder="Password"
-            id="reg-password"
-            name="password"
-            autoComplete="new-password"
-            value={form.password}
-            onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-            required
-          />
-          <button
-            type="button"
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-[#0CABA8] hover:text-[#0FC2C0]"
-            tabIndex={-1}
-            onClick={() => setShowPassword(v => !v)}
-            aria-label={showPassword ? "Hide password" : "Show password"}
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0FC2C0] via-[#0CABA8] to-[#023535] p-4">
+      <div className="max-w-md w-full">
+        
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-white mb-2">Join WorkSync</h1>
+          <p className="text-white/80">Create your account and start collaborating</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-8 bg-white/95 rounded-2xl shadow-2xl border border-[#0CABA8]/30 backdrop-blur-md space-y-4">
+          
+          {/* Name Fields Row */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="reg-first-name" className="block text-sm font-medium text-[#015958] mb-2">
+                First Name
+              </label>
+              <input 
+                id="reg-first-name" 
+                name="firstName" 
+                autoComplete="given-name" 
+                className="w-full px-4 py-3 rounded-lg border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE] transition-all" 
+                placeholder="First Name" 
+                value={form.firstName} 
+                onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))} 
+                required 
+              />
+            </div>
+            <div>
+              <label htmlFor="reg-last-name" className="block text-sm font-medium text-[#015958] mb-2">
+                Last Name
+              </label>
+              <input 
+                id="reg-last-name" 
+                name="lastName" 
+                autoComplete="family-name" 
+                className="w-full px-4 py-3 rounded-lg border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE] transition-all" 
+                placeholder="Last Name" 
+                value={form.lastName} 
+                onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))} 
+                required 
+              />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="reg-username" className="block text-sm font-medium text-[#015958] mb-2">
+              Username
+            </label>
+            <input 
+              id="reg-username" 
+              name="username" 
+              autoComplete="username" 
+              className="w-full px-4 py-3 rounded-lg border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE] transition-all" 
+              placeholder="Choose a username" 
+              value={form.username} 
+              onChange={e => setForm(f => ({ ...f, username: e.target.value }))} 
+              required 
+            />
+          </div>
+
+          <div>
+            <label htmlFor="reg-email" className="block text-sm font-medium text-[#015958] mb-2">
+              Email Address
+            </label>
+            <input 
+              id="reg-email" 
+              name="email" 
+              autoComplete="email" 
+              className="w-full px-4 py-3 rounded-lg border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE] transition-all" 
+              placeholder="Enter your email" 
+              type="email" 
+              value={form.email} 
+              onChange={e => setForm(f => ({ ...f, email: e.target.value }))} 
+              required 
+            />
+          </div>
+
+          <div className="relative">
+            <label htmlFor="reg-password" className="block text-sm font-medium text-[#015958] mb-2">
+              Password
+            </label>
+            <input
+              className="w-full px-4 py-3 rounded-lg border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE] pr-12 transition-all"
+              type={showPassword ? "text" : "password"}
+              placeholder="Create a password"
+              id="reg-password"
+              name="password"
+              autoComplete="new-password"
+              value={form.password}
+              onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+              required
+            />
+            <button
+              type="button"
+              className="absolute right-3 top-11 text-[#0CABA8] hover:text-[#0FC2C0] transition-colors"
+              tabIndex={-1}
+              onClick={() => setShowPassword(v => !v)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
+          </div>
+
+          <div className="relative">
+            <label htmlFor="reg-confirm-password" className="block text-sm font-medium text-[#015958] mb-2">
+              Confirm Password
+            </label>
+            <input
+              className="w-full px-4 py-3 rounded-lg border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE] pr-12 transition-all"
+              type={showConfirmPassword ? "text" : "password"}
+              placeholder="Confirm your password"
+              id="reg-confirm-password"
+              name="confirmPassword"
+              autoComplete="new-password"
+              value={form.confirmPassword}
+              onChange={e => setForm(f => ({ ...f, confirmPassword: e.target.value }))}
+              required
+            />
+            <button
+              type="button"
+              className="absolute right-3 top-11 text-[#0CABA8] hover:text-[#0FC2C0] transition-colors"
+              tabIndex={-1}
+              onClick={() => setShowConfirmPassword(v => !v)}
+              aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+            >
+              {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
+          </div>
+
+          <label htmlFor="reg-terms" className="flex items-start gap-3 text-[#015958] cursor-pointer">
+            <input 
+              id="reg-terms" 
+              name="terms" 
+              type="checkbox" 
+              className="mt-1 h-4 w-4 text-[#0FC2C0] border-[#0CABA8]/30 rounded focus:ring-[#0FC2C0]" 
+              checked={terms} 
+              onChange={e => setTerms(e.target.checked)} 
+            />
+            <span className="text-sm leading-relaxed">
+              I agree to the{" "}
+              <a href="/terms" className="text-[#0CABA8] hover:underline font-medium">
+                Terms of Service
+              </a>{" "}
+              and{" "}
+              <a href="/privacy" className="text-[#0CABA8] hover:underline font-medium">
+                Privacy Policy
+              </a>
+            </span>
+          </label>
+
+          {error && (
+            <div className="p-4 rounded-lg bg-red-50 border border-red-200">
+              {error.includes('Failed to fetch') || error.includes('network') || error.includes('ECONNREFUSED') ? (
+                <BackendError />
+              ) : (
+                <div className="text-red-600 text-sm">{error}</div>
+              )}
+            </div>
+          )}
+
+          <button 
+            className="w-full bg-gradient-to-r from-[#008F8C] to-[#0FC2C0] text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed" 
+            disabled={loading}
           >
-            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            {loading ? "Creating Account..." : "Create Account"}
           </button>
-        </div>
-        <div className="relative mb-3">
-          <label htmlFor="reg-confirm-password" className="sr-only">Confirm Password</label>
-          <input
-            className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE] pr-10"
-            type={showConfirmPassword ? "text" : "password"}
-            placeholder="Confirm Password"
-            id="reg-confirm-password"
-            name="confirmPassword"
-            autoComplete="new-password"
-            value={form.confirmPassword}
-            onChange={e => setForm(f => ({ ...f, confirmPassword: e.target.value }))}
-            required
-          />
-          <button
-            type="button"
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-[#0CABA8] hover:text-[#0FC2C0]"
-            tabIndex={-1}
-            onClick={() => setShowConfirmPassword(v => !v)}
-            aria-label={showConfirmPassword ? "Hide password" : "Show password"}
-          >
-            {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-          </button>
-        </div>
-        <label htmlFor="reg-terms" className="flex items-center mb-3 text-[#015958]">
-          <input id="reg-terms" name="terms" type="checkbox" className="mr-2" checked={terms} onChange={e => setTerms(e.target.checked)} />
-          I agree to the <a href="/terms" className="text-[#0CABA8] hover:underline ml-1">terms and conditions</a>
-        </label>
-        {error && (
-          error.includes('Failed to fetch') || error.includes('network') || error.includes('ECONNREFUSED') ? (
-            <BackendError />
-          ) : (
-            <div className="text-red-500 mb-2">{error}</div>
-          )
-        )}
-        <button className="bg-[#008F8C] text-white px-4 py-2 rounded w-full transition-colors duration-200 hover:bg-[#0FC2C0]" disabled={loading}>{loading ? "Registering..." : "Register"}</button>
-        <div className="mt-4 text-center">
-          <Link href="/login" className="text-[#0CABA8] hover:underline">Already have an account? Login</Link>
-        </div>
-      </form>
+
+          <div className="text-center pt-4 border-t border-[#0CABA8]/20">
+            <Link href="/login" className="text-[#0CABA8] hover:underline font-medium">
+              Already have an account? Sign in
+            </Link>
+          </div>
+        </form>
+      </div>
     </div>
   );
 } 

@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../../../api";
 import { Folder, PlusCircle, FileText, Trash2 } from "lucide-react";
 import { useToast } from "../../../../components/toast";
+import ConfirmDialog from "../../../../components/ConfirmDialog";
 
  type Task = { id: number; title: string; status?: string };
  type Note = { id: number; title: string; content?: string };
@@ -61,12 +62,28 @@ import { useToast } from "../../../../components/toast";
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [statusError, setStatusError] = useState("");
   const [statusSuccess, setStatusSuccess] = useState("");
+  
+  // Confirmation dialogs
+  const [taskConfirmOpen, setTaskConfirmOpen] = useState(false);
+  const [noteConfirmOpen, setNoteConfirmOpen] = useState(false);
+  const [targetTask, setTargetTask] = useState<{ id: number; title?: string } | null>(null);
+  const [targetNote, setTargetNote] = useState<{ id: number; title?: string } | null>(null);
 
   useEffect(() => {
     if (project?.status) {
       setProjStatus(String(project.status).toLowerCase());
     }
   }, [project?.status]);
+
+  function openTaskDeleteConfirm(id: number, title?: string) {
+    setTargetTask({ id, title });
+    setTaskConfirmOpen(true);
+  }
+
+  function openNoteDeleteConfirm(id: number, title?: string) {
+    setTargetNote({ id, title });
+    setNoteConfirmOpen(true);
+  }
 
   async function handleDeleteTask(taskId: number) {
     try {
@@ -120,7 +137,10 @@ import { useToast } from "../../../../components/toast";
     setError("");
     setSubmitting(true);
     try {
-      await api.post(`/projects/${projectId}/tasks`, { title, status });
+      // ensure we never send `undefined` to the backend; convert to null
+      const rawBody = { title, status } as Record<string, unknown>;
+      const body = Object.fromEntries(Object.entries(rawBody).map(([k, v]) => [k, v === undefined ? null : v]));
+      await api.post(`/projects/${projectId}/tasks`, body);
       setTitle("");
       setStatus("todo");
       await qc.invalidateQueries({ queryKey: ["project", projectId] });
@@ -228,13 +248,13 @@ import { useToast } from "../../../../components/toast";
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-[#0CABA8]">{t.status ?? "todo"}</span>
                         <button
-                          onClick={() => handleDeleteTask(t.id)}
+                          onClick={() => openTaskDeleteConfirm(t.id, t.title)}
                           className="text-red-600 hover:text-red-700"
                           type="button"
                           aria-label="Delete task"
                           title="Delete task"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="icon-delete" />
                         </button>
                       </div>
                     </li>
@@ -267,7 +287,9 @@ import { useToast } from "../../../../components/toast";
                   >
                     <option value="todo">To do</option>
                     <option value="in_progress">In progress</option>
+                    <option value="review">Review</option>
                     <option value="done">Done</option>
+                    <option value="cancelled">Cancelled</option>
                   </select>
                 </div>
                 {error && <div className="text-red-500 md:col-span-3">{error}</div>}
@@ -296,13 +318,13 @@ import { useToast } from "../../../../components/toast";
                         <span className="text-[#015958] font-medium">{n.title}</span>
                       </div>
                       <button
-                        onClick={() => handleDeleteNote(n.id)}
+                        onClick={() => openNoteDeleteConfirm(n.id, n.title)}
                         className="text-red-600 hover:text-red-700"
                         type="button"
                         aria-label="Delete note"
                         title="Delete note"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="icon-delete" />
                       </button>
                     </li>
                   ))}
@@ -346,6 +368,40 @@ import { useToast } from "../../../../components/toast";
           </div>
         </div>
       </div>
+      
+      <ConfirmDialog
+        open={taskConfirmOpen}
+        title={`Delete task${targetTask?.title ? ` '${targetTask.title}'` : ''}`}
+        description="This action will permanently remove the task. This cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={async () => {
+          setTaskConfirmOpen(false);
+          if (targetTask?.id) await handleDeleteTask(targetTask.id);
+          setTargetTask(null);
+        }}
+        onCancel={() => {
+          setTaskConfirmOpen(false);
+          setTargetTask(null);
+        }}
+      />
+      
+      <ConfirmDialog
+        open={noteConfirmOpen}
+        title={`Delete note${targetNote?.title ? ` '${targetNote.title}'` : ''}`}
+        description="This action will permanently remove the note. This cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={async () => {
+          setNoteConfirmOpen(false);
+          if (targetNote?.id) await handleDeleteNote(targetNote.id);
+          setTargetNote(null);
+        }}
+        onCancel={() => {
+          setNoteConfirmOpen(false);
+          setTargetNote(null);
+        }}
+      />
     </div>
   );
  }
