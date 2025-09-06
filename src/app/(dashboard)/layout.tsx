@@ -201,7 +201,7 @@ export default function DashboardLayout({
             </div>
 
             {/* Right side */}
-            <div className="flex items-center gap-x-4 lg:gap-x-6">
+            <div className="flex items-center gap-x-2">
               {/* Global Presence Indicator */}
               {auth?.user?.id && (
                 <GlobalPresenceIndicator
@@ -213,33 +213,43 @@ export default function DashboardLayout({
                 />
               )}
 
-              {/* Notifications */}
-              <div className="relative group">
-                <button 
-                  className="-m-2.5 p-2.5 text-white/90 hover:text-[#015958]"
-                  aria-label="View notifications"
-                >
-                  <Bell className="h-6 w-6" />
-                </button>
-                <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-max -translate-x-1/2 rounded bg-[#015958] px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity">View notifications</span>
-              </div>
-
-              {/* Profile dropdown */}
-              <div className="relative">
+              {/* Header Icons - Properly aligned */}
+              <div className="flex items-center gap-x-1">
+                {/* Notifications */}
                 <div className="relative group">
-                  <button aria-label="Open profile menu" className="flex items-center gap-x-3 text-sm font-medium text-white hover:text-[#015958]">
-                    <div className="h-8 w-8 rounded-full bg-[#0FC2C0] flex items-center justify-center">
-                      <User className="h-5 w-5 text-white" />
+                  <button 
+                    className="p-2 text-white/90 hover:text-[#015958] transition-colors duration-200 rounded-full hover:bg-white/10"
+                    aria-label="View notifications"
+                  >
+                    <Bell className="h-5 w-5" />
+                  </button>
+                  <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-max -translate-x-1/2 rounded bg-[#015958] px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity">View notifications</span>
+                </div>
+
+                {/* Profile dropdown */}
+                <div className="relative group">
+                  <button 
+                    aria-label="Open profile menu" 
+                    className="p-2 text-white hover:text-[#015958] transition-colors duration-200 rounded-full hover:bg-white/10"
+                  >
+                    <div className="h-5 w-5 rounded-full bg-white/20 flex items-center justify-center">
+                      <User className="h-4 w-4 text-white" />
                     </div>
                   </button>
                   <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-max -translate-x-1/2 rounded bg-[#015958] px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity">Profile</span>
                 </div>
-              </div>
-              <div className="relative group">
-                <button onClick={handleLogout} className="-m-2.5 p-2.5 text-white hover:text-[#015958]" aria-label="Logout">
-                  <LogOut className="h-5 w-5" />
-                </button>
-                <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-max -translate-x-1/2 rounded bg-[#015958] px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity">Logout</span>
+
+                {/* Logout */}
+                <div className="relative group">
+                  <button 
+                    onClick={handleLogout} 
+                    className="p-2 text-white hover:text-[#015958] transition-colors duration-200 rounded-full hover:bg-white/10" 
+                    aria-label="Logout"
+                  >
+                    <LogOut className="h-5 w-5" />
+                  </button>
+                  <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-max -translate-x-1/2 rounded bg-[#015958] px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity">Logout</span>
+                </div>
               </div>
             </div>
           </div>

@@ -6,6 +6,7 @@ import { api } from "../../../../api";
 import { Folder, PlusCircle, FileText, Trash2 } from "lucide-react";
 import { useToast } from "../../../../components/toast";
 import ConfirmDialog from "../../../../components/ConfirmDialog";
+import StatusSelect from "../../../../components/StatusSelect";
 
  type Task = { id: number; title: string; status?: string };
  type Note = { id: number; title: string; content?: string };
@@ -88,8 +89,12 @@ import ConfirmDialog from "../../../../components/ConfirmDialog";
   async function handleDeleteTask(taskId: number) {
     try {
       await api.delete(`/tasks/${taskId}`);
+      
+      // Invalidate and refetch all relevant queries to update the task list
       await qc.invalidateQueries({ queryKey: ["project", projectId] });
+      await qc.invalidateQueries({ queryKey: ["projectTasks", projectId] });
       await qc.refetchQueries({ queryKey: ["project", projectId] });
+      await qc.refetchQueries({ queryKey: ["projectTasks", projectId] });
       qc.invalidateQueries({ queryKey: ["tasks"] });
       addToast({ title: "Task deleted", variant: "success" });
     } catch {
@@ -100,8 +105,12 @@ import ConfirmDialog from "../../../../components/ConfirmDialog";
   async function handleDeleteNote(noteId: number) {
     try {
       await api.delete(`/notes/${noteId}`);
+      
+      // Invalidate and refetch all relevant queries to update the note list
       await qc.invalidateQueries({ queryKey: ["project", projectId] });
+      await qc.invalidateQueries({ queryKey: ["projectNotes", projectId] });
       await qc.refetchQueries({ queryKey: ["project", projectId] });
+      await qc.refetchQueries({ queryKey: ["projectNotes", projectId] });
       qc.invalidateQueries({ queryKey: ["notes"] });
       addToast({ title: "Note deleted", variant: "success" });
     } catch {
@@ -143,8 +152,12 @@ import ConfirmDialog from "../../../../components/ConfirmDialog";
       await api.post(`/projects/${projectId}/tasks`, body);
       setTitle("");
       setStatus("todo");
+      
+      // Invalidate and refetch all relevant queries to update the task list
       await qc.invalidateQueries({ queryKey: ["project", projectId] });
+      await qc.invalidateQueries({ queryKey: ["projectTasks", projectId] });
       await qc.refetchQueries({ queryKey: ["project", projectId] });
+      await qc.refetchQueries({ queryKey: ["projectTasks", projectId] });
       qc.invalidateQueries({ queryKey: ["projects"] });
       qc.invalidateQueries({ queryKey: ["tasks"] });
       addToast({ title: "Task created", description: title, variant: "success" });
@@ -171,8 +184,12 @@ import ConfirmDialog from "../../../../components/ConfirmDialog";
       await api.post(`/projects/${projectId}/notes`, { title: noteTitle, content: noteContent });
       setNoteTitle("");
       setNoteContent("");
+      
+      // Invalidate and refetch all relevant queries to update the note list
       await qc.invalidateQueries({ queryKey: ["project", projectId] });
+      await qc.invalidateQueries({ queryKey: ["projectNotes", projectId] });
       await qc.refetchQueries({ queryKey: ["project", projectId] });
+      await qc.refetchQueries({ queryKey: ["projectNotes", projectId] });
       qc.invalidateQueries({ queryKey: ["projects"] });
       qc.invalidateQueries({ queryKey: ["notes"] });
       addToast({ title: "Note created", description: noteTitle, variant: "success" });
@@ -279,18 +296,12 @@ import ConfirmDialog from "../../../../components/ConfirmDialog";
                 </div>
                 <div>
                   <label className="block text-[#015958] font-semibold mb-1">Status</label>
-                  <select
-                    aria-label="New task status"
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value)}
-                    className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]"
-                  >
-                    <option value="todo">To do</option>
-                    <option value="in_progress">In progress</option>
-                    <option value="review">Review</option>
-                    <option value="done">Done</option>
-                    <option value="cancelled">Cancelled</option>
-                  </select>
+                  <StatusSelect 
+                    value={status} 
+                    onChange={setStatus}
+                    projectId={parseInt(projectId)}
+                    required
+                  />
                 </div>
                 {error && <div className="text-red-500 md:col-span-3">{error}</div>}
                 <button
