@@ -216,11 +216,16 @@ export default function WorkspaceProjectsPage() {
   // We split non-archived vs archived and render non-archived first.
   const sortedNonArchived = useMemo(() => {
     return filtered
-      .filter(p => normalizeStatus(p.status ?? p['state'] ?? p['project_status']) !== 'archived')
+      .filter(p => {
+        const project = p as any; // Type assertion for flexibility with varying API responses
+        return normalizeStatus(project.status ?? project.state ?? project.project_status) !== 'archived';
+      })
       .slice()
       .sort((a, b) => {
-        const sa = normalizeStatus(a.status ?? a['state'] ?? a['project_status']);
-        const sb = normalizeStatus(b.status ?? b['state'] ?? b['project_status']);
+        const projectA = a as any;
+        const projectB = b as any;
+        const sa = normalizeStatus(projectA.status ?? projectA.state ?? projectA.project_status);
+        const sb = normalizeStatus(projectB.status ?? projectB.state ?? projectB.project_status);
         const ra = statusToRank(sa);
         const rb = statusToRank(sb);
         if (ra !== rb) return ra - rb;
@@ -232,7 +237,10 @@ export default function WorkspaceProjectsPage() {
 
   const sortedArchived = useMemo(() => {
     return filtered
-      .filter(p => normalizeStatus(p.status ?? p['state'] ?? p['project_status']) === 'archived')
+      .filter(p => {
+        const project = p as any; // Type assertion for flexibility with varying API responses
+        return normalizeStatus(project.status ?? project.state ?? project.project_status) === 'archived';
+      })
       .slice()
       .sort((a, b) => {
         const ta = a.updatedAt ? Date.parse(a.updatedAt) : 0;
@@ -347,36 +355,7 @@ export default function WorkspaceProjectsPage() {
         {isError && <div className="text-red-500">Failed to load projects</div>}
         
         {/* Debug info */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="mb-4 p-4 bg-gray-100 text-sm">
-            <div className="flex justify-between items-start mb-2">
-              <strong>Debug Info:</strong>
-              <button 
-                onClick={() => queryClient.invalidateQueries({ queryKey: ["projects"] })}
-                className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
-              >
-                Refresh Data
-              </button>
-            </div>
-            <div>• effectiveWsId = {String(effectiveWsId)}</div>
-            <div>• workspaces.length = {workspaces.length}</div>
-            <div>• filtered.length = {filtered.length}</div>
-            <div>• sortedNonArchived.length = {sortedNonArchived.length}</div>
-            <div>• raw data = {JSON.stringify(data, null, 2)}</div>
-            <div>• normalized = {JSON.stringify(normalized, null, 2)}</div>
-            <div>• query enabled = {String(effectiveWsId != null)}</div>
-            <div>• isLoading = {String(isLoading)}</div>
-            <div>• isError = {String(isError)}</div>
-            <div>• API URL would be: /projects?workspace_id={effectiveWsId}</div>
-            <details className="mt-2">
-              <summary className="cursor-pointer text-blue-600">Show ALL projects (debug)</summary>
-              <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
-                <div><strong>ALL projects from /projects:</strong></div>
-                <div>{JSON.stringify(allProjectsData, null, 2)}</div>
-              </div>
-            </details>
-          </div>
-        )}
+
 
         {/* If multiple workspaces exist but none selected, prompt selection instead of showing all */}
         {workspaces.length > 1 && effectiveWsId == null ? (
