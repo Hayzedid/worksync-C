@@ -202,7 +202,14 @@ export default function NotesPage() {
     <div className="min-h-screen bg-[#F6FFFE] p-8">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold text-[#0FC2C0]">Notes</h1>
+          <div>
+            <h1 className="text-3xl font-bold text-[#0FC2C0]">Notes</h1>
+            {effectiveWsId != null && (
+              <div className="text-sm text-[#0CABA8] mt-1">
+                Showing notes for workspace ID: {effectiveWsId}
+              </div>
+            )}
+          </div>
           <Link href={effectiveWsId != null ? `/notes/new?ws=${effectiveWsId}` : "/notes/new"} className="flex items-center gap-2 px-4 py-2 bg-[#0FC2C0] text-white rounded hover:bg-[#0CABA8] transition-colors font-semibold"><Plus className="h-4 w-4" /> New Note</Link>
         </div>
         {isLoading && effectiveWsId != null && <div className="text-[#015958]">Loading...</div>}
