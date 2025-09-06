@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { BackendError } from "../../../components/BackendError";
 import { useAuth } from "../../../hooks/useAuth";
@@ -10,9 +10,17 @@ import { Eye, EyeOff } from "lucide-react";
 const timezones = ["UTC", "America/New_York", "Europe/London"];
 
 export default function RegisterPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const { register } = useAuth();
+  
+  // Pre-fill email from URL params (for invitations)
+  const prefilledEmail = searchParams?.get('email') || '';
+  const returnUrl = searchParams?.get('returnUrl') || '';
+
   const [form, setForm] = useState({
     username: "",
-    email: "",
+    email: prefilledEmail,
     password: "",
     confirmPassword: "",
     firstName: "",
@@ -24,10 +32,15 @@ export default function RegisterPage() {
   const [terms, setTerms] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
-  const { register } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Update email when URL params change (for invitation flow)
+  useEffect(() => {
+    if (prefilledEmail && prefilledEmail !== form.email) {
+      setForm(prev => ({ ...prev, email: prefilledEmail }));
+    }
+  }, [prefilledEmail, form.email]);
 
   // keep intentionally to avoid noisy eslint `assigned a value but never used` during iterative development
   void timezones;
@@ -62,7 +75,12 @@ export default function RegisterPage() {
       });
       
       if (result.success) {
-        router.push("/login");
+        // If there's a return URL (from invitation), redirect there after successful registration
+        if (returnUrl) {
+          router.push(decodeURIComponent(returnUrl));
+        } else {
+          router.push("/login");
+        }
       } else {
         setError(result.message || "Registration failed");
       }

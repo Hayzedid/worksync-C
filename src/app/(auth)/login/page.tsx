@@ -1,12 +1,14 @@
 "use client";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../../../hooks/useAuth";
 import { BackendError } from "../../../components/BackendError";
 import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
+  const searchParams = useSearchParams();
+  const returnUrl = searchParams?.get('returnUrl') || '';
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState<Error | null>(null);
   const [loading, setLoading] = useState(false);
@@ -34,7 +36,12 @@ export default function LoginPage() {
     try {
       const result = await auth.login(cleanData.email, cleanData.password);
       if (result.success) {
-        router.replace("/dashboard");
+        // If there's a return URL (from invitation), redirect there after successful login
+        if (returnUrl) {
+          router.replace(decodeURIComponent(returnUrl));
+        } else {
+          router.replace("/dashboard");
+        }
       } else {
         // Create a specific error based on the message to trigger proper error component
         const errorMessage = result.message || "Login failed";

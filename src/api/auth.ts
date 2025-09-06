@@ -9,11 +9,6 @@ export async function login(email: string, password: string) {
       withCredentials: true,
       headers: { 'Content-Type': 'application/json' },
     });
-    // Debug: log cookies after login
-    if (typeof window !== 'undefined') {
-      console.log('Login response:', response.data);
-      console.log('Document cookies after login:', document.cookie);
-    }
     // No token storage on client; rely on HttpOnly cookie
     return response.data?.user ?? null;
   } catch (err: unknown) {
