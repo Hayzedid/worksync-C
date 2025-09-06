@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "../../../hooks/useAuth";
+import { useRealTimeDashboard } from "../../../hooks/useRealTimeDashboard";
 import { ActivityFeed } from "../../../components/activity/ActivityFeed";
-import { Calendar, AlertCircle, Clock, FolderIcon, CheckCircleIcon, BellIcon } from "lucide-react";
-import { api } from "../../../api";
+import { RealTimeAnalytics } from "../../../components/dashboard/RealTimeAnalytics";
+import { Calendar, AlertCircle, Clock, FolderIcon, CheckCircleIcon, BellIcon, Wifi, WifiOff, RotateCw } from "lucide-react";
 
 interface Task {
   id: number;
@@ -19,7 +20,7 @@ interface Project {
   id: number;
   name: string;
   status: string;
-  workspace_id: number;
+  workspace_id?: number;
 }
 
 interface Event {
@@ -49,6 +50,8 @@ interface Activity {
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const [currentWorkspaceId, setCurrentWorkspaceId] = useState<number | undefined>();
+  
   // Dynamic header message templates that include a {name} placeholder
   const dynamicHeaderMessages = [
     'What are we working on today, {name}?',
@@ -58,113 +61,91 @@ export default function DashboardPage() {
     'Quick snapshot of your work and activity, {name}.'
   ];
   const [dynamicHeader, setDynamicHeader] = useState<string>('');
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [events, setEvents] = useState<Event[]>([]);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [activities, setActivities] = useState<Activity[]>([]);
-  const [loading, setLoading] = useState(true);
 
+  // Use real-time dashboard hook
+  const { data, loading, error, connectionStatus, refresh } = useRealTimeDashboard(currentWorkspaceId);
+
+  // Get workspace ID from sessionStorage or URL
   useEffect(() => {
-  // Pick a random header template and replace {name} with the authenticated user's first name
-  const displayName = (user && user.firstName) ? user.firstName : 'User';
-  const template = dynamicHeaderMessages[Math.floor(Math.random() * dynamicHeaderMessages.length)];
-  setDynamicHeader(template.replace('{name}', displayName));
-
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        
-        // Fetch all dashboard data in parallel
-        const [
-          tasksResponse, 
-          projectsResponse, 
-          eventsResponse, 
-          notificationsResponse,
-          activitiesResponse
-        ] = await Promise.allSettled([
-          api.get('/tasks'),
-          api.get('/projects'),
-          api.get('/events'),
-          api.get('/notifications'),
-          api.get('/activity')
-        ]);
-
-        // Process tasks
-        if (tasksResponse.status === 'fulfilled') {
-          const data = tasksResponse.value as any;
-          setTasks(data.success ? (data.data || []) : []);
+    if (typeof window !== 'undefined') {
+      const stored = sessionStorage.getItem('current_workspace_id');
+      if (stored) {
+        const wsId = parseInt(stored, 10);
+        if (Number.isFinite(wsId)) {
+          setCurrentWorkspaceId(wsId);
         }
-
-        // Process projects
-        if (projectsResponse.status === 'fulfilled') {
-          const data = projectsResponse.value as any;
-          setProjects(data.success ? (data.data || []) : []);
-        }
-
-        // Process events
-        if (eventsResponse.status === 'fulfilled') {
-          const data = eventsResponse.value as any;
-          setEvents(data.success ? (data.data || []) : []);
-        }
-
-        // Process notifications
-        if (notificationsResponse.status === 'fulfilled') {
-          const data = notificationsResponse.value as any;
-          setNotifications(data.success ? (data.data || []) : []);
-        }
-
-        // Process activities
-        if (activitiesResponse.status === 'fulfilled') {
-          const data = activitiesResponse.value as any;
-          setActivities(data.success ? (data.data || []) : []);
-        }
-
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-      } finally {
-        setLoading(false);
       }
-    };
-
-    fetchDashboardData();
+    }
   }, []);
 
-  // Filter upcoming deadlines (next 7 days)
-  const upcomingDeadlines = tasks.filter(task => {
-    if (!task.due_date) return false;
-    const dueDate = new Date(task.due_date);
-    const now = new Date();
-    const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-    return dueDate >= now && dueDate <= weekFromNow;
-  });
+  useEffect(() => {
+    // Pick a random header template and replace {name} with the authenticated user's first name
+    const displayName = (user && user.firstName) ? user.firstName : 'User';
+    const template = dynamicHeaderMessages[Math.floor(Math.random() * dynamicHeaderMessages.length)];
+    const personalizedHeader = template.replace('{name}', displayName);
+    setDynamicHeader(personalizedHeader);
+  }, [user, dynamicHeaderMessages]);
 
-  // Filter upcoming events (next 7 days)
-  const upcomingEvents = events.filter(event => {
-    if (!event.start_date) return false;
-    const eventDate = new Date(event.start_date);
-    const now = new Date();
-    const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-    return eventDate >= now && eventDate <= weekFromNow;
-  });
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-center space-x-2 mb-8">
+            <RotateCw className="h-5 w-5 animate-spin text-blue-600" />
+            <span className="text-gray-600">Loading dashboard...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-  // Filter recent activities (last 5)
-  const recentActivities = activities.slice(0, 5);
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="h-5 w-5 text-red-600" />
+              <h3 className="text-red-800 font-medium">Error Loading Dashboard</h3>
+            </div>
+            <p className="text-red-700 mt-2">{error}</p>
+            <button 
+              onClick={refresh}
+              className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-  // Filter unread notifications
-  const unreadNotifications = notifications.filter(notif => !notif.is_read);
+  const { tasks, projects, events, notifications, activities } = data || {
+    tasks: { total: 0, pending: 0, completed: 0, overdue: 0, byPriority: { high: 0, medium: 0, low: 0 }, byStatus: {}, upcomingDeadlines: [] },
+    projects: { total: 0, active: 0, completed: 0, onHold: 0, byWorkspace: {} },
+    events: { total: 0, upcoming: [], today: [] },
+    notifications: { total: 0, unread: 0, recent: [] },
+    activities: { recent: [] }
+  };
+
+  // Extract arrays from the structured data
+  const upcomingDeadlines = tasks.upcomingDeadlines || [];
+  const upcomingEvents = events.upcoming || [];
+  const recentActivities = activities.recent || [];
+  const recentNotifications = notifications.recent || [];
 
   const stats = [
     {
       name: 'Total Projects',
-      value: projects.length,
+      value: projects.total,
       icon: FolderIcon,
       color: 'text-[#0FC2C0]',
       bg: 'bg-[#0FC2C0]/10'
     },
     {
       name: 'Active Tasks',
-      value: tasks.filter(t => t.status !== 'done').length,
+      value: tasks.pending,
       icon: CheckCircleIcon,
       color: 'text-[#0CABA8]',
       bg: 'bg-[#0CABA8]/10'
@@ -178,75 +159,93 @@ export default function DashboardPage() {
     },
     {
       name: 'Notifications',
-      value: unreadNotifications.length,
+      value: notifications.unread,
       icon: BellIcon,
       color: 'text-orange-500',
       bg: 'bg-orange-500/10'
     }
   ];
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-24 bg-gray-200 rounded"></div>
-            ))}
+  return (
+    <div className="min-h-screen bg-gray-50 p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Connection Status Indicator */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-[#015958]">
+              Welcome back, {user?.firstName || 'User'}!
+            </h1>
+            <p className="text-[#0CABA8]">{dynamicHeader || "Here's what's happening with your work today."}</p>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-64 bg-gray-200 rounded"></div>
-            ))}
+          
+          <div className="flex items-center space-x-2">
+            {connectionStatus === 'connected' ? (
+              <>
+                <Wifi className="h-5 w-5 text-green-600" />
+                <span className="text-sm text-green-600">Live updates active</span>
+              </>
+            ) : connectionStatus === 'disconnected' ? (
+              <>
+                <WifiOff className="h-5 w-5 text-red-600" />
+                <span className="text-sm text-red-600">Offline - trying to reconnect</span>
+              </>
+            ) : (
+              <>
+                <RotateCw className="h-5 w-5 animate-spin text-yellow-600" />
+                <span className="text-sm text-yellow-600">Connecting...</span>
+              </>
+            )}
+            <button
+              onClick={refresh}
+              className="ml-2 p-2 text-gray-500 hover:text-gray-700 transition-colors"
+              title="Refresh dashboard"
+            >
+              <RotateCw className="h-4 w-4" />
+            </button>
           </div>
         </div>
-      </div>
-    );
-  }
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-[#015958]">
-          Welcome back, {user?.firstName || 'User'}!
-        </h1>
-  <p className="text-[#0CABA8]">{dynamicHeader || "Here's what's happening with your work today."}</p>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => (
-          <div key={stat.name} className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className={`p-2 rounded-lg ${stat.bg}`}>
-                <stat.icon className={`h-6 w-6 ${stat.color}`} />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">{stat.name}</p>
-                <p className="text-2xl font-semibold text-[#015958]">{stat.value}</p>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {stats.map((stat) => (
+            <div key={stat.name} className="bg-white rounded-lg shadow p-6">
+              <div className="flex items-center">
+                <div className={`p-2 rounded-lg ${stat.bg}`}>
+                  <stat.icon className={`h-6 w-6 ${stat.color}`} />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">{stat.name}</p>
+                  <p className="text-2xl font-semibold text-[#015958]">{stat.value}</p>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
 
-      {/* Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Upcoming Deadlines */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex items-center">
-              <AlertCircle className="h-5 w-5 text-orange-500 mr-2" />
-              <h2 className="text-lg font-semibold text-[#015958]">Upcoming Deadlines</h2>
-            </div>
+        {/* Real-Time Analytics Section */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-[#015958]">Real-Time Analytics</h2>
+            <span className="text-sm text-gray-500">Updates automatically</span>
           </div>
-          <div className="p-6">
-            {upcomingDeadlines.length > 0 ? (
-              <div className="space-y-3">
-                {upcomingDeadlines.slice(0, 5).map((task) => (
-                  <div key={task.id} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+          <RealTimeAnalytics workspaceId={currentWorkspaceId} />
+        </div>
+
+        {/* Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Upcoming Deadlines */}
+          <div className="bg-white rounded-lg shadow">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center">
+                <AlertCircle className="h-5 w-5 text-orange-500 mr-2" />
+                <h2 className="text-lg font-semibold text-[#015958]">Upcoming Deadlines</h2>
+              </div>
+            </div>
+            <div className="p-6">
+              {upcomingDeadlines.length > 0 ? (
+                <div className="space-y-3">
+                  {upcomingDeadlines.slice(0, 5).map((task: Task) => (
+                    <div key={task.id} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
                     <div>
                       <p className="font-medium text-[#015958]">{task.title}</p>
                       <p className="text-sm text-gray-600">
@@ -280,7 +279,7 @@ export default function DashboardPage() {
           <div className="p-6">
             {upcomingEvents.length > 0 ? (
               <div className="space-y-3">
-                {upcomingEvents.slice(0, 5).map((event) => (
+                {upcomingEvents.slice(0, 5).map((event: Event) => (
                   <div key={event.id} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
                     <div>
                       <p className="font-medium text-[#015958]">{event.title}</p>
@@ -314,7 +313,7 @@ export default function DashboardPage() {
           <div className="p-6">
             {recentActivities.length > 0 ? (
               <div className="space-y-3">
-                {recentActivities.map((activity) => (
+                {recentActivities.map((activity: Activity) => (
                   <div key={activity.id} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
                     <div className="flex-1">
                       <p className="text-sm text-[#015958]">{activity.content}</p>
@@ -340,9 +339,9 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="p-6">
-            {notifications.length > 0 ? (
+            {recentNotifications.length > 0 ? (
               <div className="space-y-3">
-                {notifications.slice(0, 5).map((notification) => (
+                {recentNotifications.slice(0, 5).map((notification: Notification) => (
                   <div key={notification.id} className={`p-3 rounded-lg ${
                     notification.is_read ? 'bg-gray-50' : 'bg-yellow-50'
                   }`}>
@@ -358,6 +357,7 @@ export default function DashboardPage() {
               <p className="text-gray-500 text-center py-4">No notifications</p>
             )}
           </div>
+        </div>
         </div>
       </div>
     </div>
