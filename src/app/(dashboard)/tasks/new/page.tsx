@@ -5,6 +5,7 @@ import Link from "next/link";
 import { api } from "../../../../api";
 import { Plus } from "lucide-react";
 import { useToast } from "../../../../components/toast";
+import StatusSelect from "../../../../components/StatusSelect";
 
 export default function NewTaskPage() {
   const [title, setTitle] = useState("");
@@ -69,13 +70,12 @@ export default function NewTaskPage() {
           </div>
           <div>
             <label className="block text-[#015958] font-semibold mb-1">Status</label>
-              <select aria-label="Task status" value={status} onChange={e => setStatus(e.target.value)} className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]">
-              <option value="todo">To do</option>
-              <option value="in_progress">In Progress</option>
-              <option value="review">Review</option>
-              <option value="done">Done</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
+            <StatusSelect 
+              value={status} 
+              onChange={setStatus}
+              projectId={projectId}
+              required
+            />
           </div>
           {error && <div className="text-red-500">{error}</div>}
           <div className="flex items-center justify-end gap-3">

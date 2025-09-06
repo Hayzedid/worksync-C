@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "../../../hooks/useAuth";
 import ConfirmDialog from "../../../components/ConfirmDialog";
+import StatusSelect from "../../../components/StatusSelect";
 import { 
   ItemPresenceIndicator,
   UniversalComments,
@@ -25,28 +26,76 @@ type Task = {
   workspace?: { id: number; name: string };
 };
 
-const TASK_STATUSES = [
-  { value: 'todo', label: 'To Do', color: 'bg-gray-100 text-gray-800' },
-  { value: 'in_progress', label: 'In Progress', color: 'bg-blue-100 text-blue-800' },
-  { value: 'review', label: 'Review', color: 'bg-yellow-100 text-yellow-800' },
-  { value: 'done', label: 'Done', color: 'bg-green-100 text-green-800' },
-  { value: 'cancelled', label: 'Cancelled', color: 'bg-red-100 text-red-800' }
-];
-
 function TaskStatusDropdown({ task, onStatusChange }: { task: Task; onStatusChange: (taskId: number, newStatus: string) => void }) {
   const [isOpen, setIsOpen] = useState(false);
-  const currentStatus = TASK_STATUSES.find(s => s.value === task.status) || TASK_STATUSES[0];
+  const [statusOptions, setStatusOptions] = useState<Array<{ value: string; label: string; color: string }>>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Load dynamic status options based on whether task is in a project
+  useEffect(() => {
+    async function fetchStatusOptions() {
+      try {
+        const params = new URLSearchParams();
+        params.append('task_id', task.id.toString());
+        
+        const response = await api.get(`/tasks/status-options?${params.toString()}`);
+        const data = response as { statusOptions: Array<{ value: string; label: string; description?: string }>; taskType: 'general' | 'project' };
+        
+        // Color mapping for status options
+        const statusColors: Record<string, string> = {
+          'todo': 'bg-gray-100 text-gray-800',
+          'in_progress': 'bg-blue-100 text-blue-800',
+          'review': 'bg-yellow-100 text-yellow-800',
+          'done': 'bg-green-100 text-green-800',
+          'cancelled': 'bg-red-100 text-red-800',
+          'archived': 'bg-gray-300 text-gray-600'
+        };
+        
+        // Convert to the format expected by this component
+        const formattedOptions = data.statusOptions.map(option => ({
+          value: option.value,
+          label: option.label,
+          color: statusColors[option.value] || 'bg-gray-100 text-gray-800'
+        }));
+        
+        setStatusOptions(formattedOptions);
+      } catch (error) {
+        console.error('Failed to fetch status options:', error);
+        // Fallback to basic options for general tasks
+        setStatusOptions([
+          { value: 'todo', label: 'To Do', color: 'bg-gray-100 text-gray-800' },
+          { value: 'in_progress', label: 'In Progress', color: 'bg-blue-100 text-blue-800' },
+          { value: 'done', label: 'Done', color: 'bg-green-100 text-green-800' }
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchStatusOptions();
+  }, [task.id, task.projectId]);
+
+  const currentStatus = statusOptions.find(s => s.value === task.status) || statusOptions[0];
 
   const handleStatusSelect = async (newStatus: string) => {
     setIsOpen(false);
     await onStatusChange(task.id, newStatus);
   };
 
+  if (loading) {
+    return (
+      <span className="text-[#015958] font-medium">
+        {task.title}
+      </span>
+    );
+  }
+
   return (
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="text-[#015958] font-medium cursor-pointer hover:text-[#0FC2C0] flex items-center gap-1"
+        title={`Click to change status from ${currentStatus?.label || task.status}`}
       >
         {task.title}
         <ChevronDown size={14} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -55,7 +104,7 @@ function TaskStatusDropdown({ task, onStatusChange }: { task: Task; onStatusChan
       {isOpen && (
         <div className="absolute top-full left-0 mt-1 bg-white border border-[#0CABA8]/30 rounded-lg shadow-lg z-50 min-w-[150px]">
           <div className="py-1">
-            {TASK_STATUSES.map((status) => (
+            {statusOptions.map((status) => (
               <button
                 key={status.value}
                 onClick={() => handleStatusSelect(status.value)}
@@ -129,14 +178,15 @@ export default function TasksPage() {
   const effectiveWsId = wsIdFromUrl ?? currentWsId;
   
   const { data, isLoading, isError, error } = useQuery<unknown>({
-    queryKey: ["tasks"],
-    queryFn: () => api.get("/tasks"),
+    queryKey: ["tasks", { workspace_id: effectiveWsId }],
+    queryFn: () => api.get("/tasks", { params: effectiveWsId != null ? { workspace_id: effectiveWsId } : undefined }),
+    staleTime: 0,
   });
   
   // Also fetch projects to resolve names when tasks only provide projectId
   const { data: projectsData } = useQuery<unknown>({
-    queryKey: ["projects"],
-    queryFn: () => api.get("/projects"),
+    queryKey: ["projects", { workspace_id: effectiveWsId }],
+    queryFn: () => api.get("/projects", { params: effectiveWsId != null ? { workspace_id: effectiveWsId } : undefined }),
   });
   
   const tasks: Task[] = Array.isArray(data)
@@ -250,7 +300,14 @@ export default function TasksPage() {
     <div className="min-h-screen bg-[#F6FFFE] p-8">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold text-[#0FC2C0]">Tasks</h1>
+          <div>
+            <h1 className="text-3xl font-bold text-[#0FC2C0]">Tasks</h1>
+            {effectiveWsId != null && (
+              <div className="text-sm text-[#0CABA8] mt-1">
+                Showing tasks for workspace ID: {effectiveWsId}
+              </div>
+            )}
+          </div>
           <Link href={effectiveWsId != null ? `/tasks/new?ws=${effectiveWsId}` : "/tasks/new"} className="flex items-center gap-2 px-4 py-2 bg-[#0FC2C0] text-white rounded hover:bg-[#0CABA8] transition-colors font-semibold">
             <Plus className="h-4 w-4" /> New Task
           </Link>
