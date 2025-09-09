@@ -1,53 +1,25 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
-import Link from "next/link";
-import { CollaborativeRichTextEditor } from "../../../../components/CollaborativeRichTextEditor";
-import Y, { Y as Yns } from '../../../../lib/singleYjs';
-import { WebsocketProvider } from 'y-websocket';
-import { useParams } from "next/navigation";
-import { api } from "../../../../api";
-import { useSocket } from "../../../../components/SocketProvider";
-import { useToast } from "../../../../components/toast";
 
+import { useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
 
-import { LiveCursors, useLiveCursors } from "../../../../components/LiveCursors";
-import { NoteChat } from "../../../../components/NoteChat";
-
-export default function NoteCollaborativePage() {
-  // Yjs CRDT setup
-  const ydocRef = useRef<Y.Doc | null>(null);
-  const yProviderRef = useRef<WebsocketProvider | null>(null);
-  const yTextRef = useRef<Y.Text | null>(null);
-  const [showHistory, setShowHistory] = useState(false);
-  // Undo/Redo & Version History
-  const [history, setHistory] = useState<{ title: string; content: string; user: string; time: string }[]>([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
-  const undoManagerRef = useRef<Y.UndoManager | null>(null);
-  const [canUndo, setCanUndo] = useState(false);
-  const [canRedo, setCanRedo] = useState(false);
-
-  // For demo: use a placeholder user (replace with real user info in production)
-  const localUserId = typeof window !== 'undefined' ? (window.localStorage.getItem('user_id') || 'user-' + Math.floor(Math.random() * 10000)) : 'user-demo';
-  const localUserName = typeof window !== 'undefined' ? (window.localStorage.getItem('user_name') || 'Anonymous') : 'Anonymous';
-  // Save random user id/name for demo
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem('user_id', localUserId);
-      window.localStorage.setItem('user_name', localUserName);
-    }
-  }, [localUserId, localUserName]);
+export default function NoteRedirectPage() {
   const { id } = useParams();
-  const contentRef = useRef<HTMLTextAreaElement>(null);
-  const cursors = useLiveCursors({ noteId: String(id), localUserId, localUserName, textareaRef: contentRef });
-  const { addToast } = useToast();
-  const socket = useSocket();
-  const [content, setContent] = useState("");
-  const [title, setTitle] = useState("");
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [presence, setPresence] = useState<{ userName: string; typing: boolean; color: string }[]>([]);
-  const [isTyping, setIsTyping] = useState(false);
+  const router = useRouter();
 
-  // Yjs: Setup CRDT doc and provider for this note
+  useEffect(() => {
+    if (id) {
+      // Redirect to the edit page by default
+      router.replace(`/notes/${id}/edit`);
+    }
+  }, [id, router]);
+
+  return (
+    <div className="min-h-screen bg-[#F6FFFE] flex items-center justify-center">
+      <div className="text-[#015958]">Redirecting to note editor...</div>
+    </div>
+  );
+}
   useEffect(() => {
     if (!id) return;
     // Create Yjs doc and provider
@@ -80,11 +52,11 @@ export default function NoteCollaborativePage() {
     const fetchNote = async () => {
       try {
         const data = await api.get(`/notes/${id}`);
-        setTitle(data.title);
+        setTitle(data.title || "");
         if (ytext.length === 0 && data.content) {
           ytext.insert(0, data.content);
         }
-        setHistory([{ title: data.title, content: data.content, user: 'Initial', time: new Date().toLocaleTimeString() }]);
+        setHistory([{ title: data.title || "", content: data.content || "", user: 'Initial', time: new Date().toLocaleTimeString() }]);
         setHistoryIndex(0);
         setLoadError(null);
       } catch (err: unknown) {
@@ -248,7 +220,7 @@ export default function NoteCollaborativePage() {
       <NoteChat noteId={String(id)} userId={localUserId} userName={localUserName} />
       <input
         className="w-full border border-gray-300 rounded p-2 mb-4 bg-white text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0CABA8]"
-        value={title}
+        value={title || ""}
         onChange={e => handleEdit("title", e.target.value)}
         placeholder="Note title"
       />
@@ -270,15 +242,15 @@ export default function NoteCollaborativePage() {
             {history.map((h, i) => (
               <li key={i} className={i === historyIndex ? 'bg-[#F6FFFE] font-bold' : ''}>
                 <div>By: {h.user} at {h.time}</div>
-                <div>Title: {h.title}</div>
-                <div>Content: {h.content}</div>
+                <div>Title: {h.title || ""}</div>
+                <div>Content: {h.content || ""}</div>
                 <button onClick={() => {
-                  setTitle(h.title);
-                  setContent(h.content);
+                  setTitle(h.title || "");
+                  setContent(h.content || "");
                   setHistoryIndex(i);
                   if (socket) {
-                    socket.emit("note:edit", { noteId: id, field: "title", value: h.title, userName: localUserName });
-                    socket.emit("note:edit", { noteId: id, field: "content", value: h.content, userName: localUserName });
+                    socket.emit("note:edit", { noteId: id, field: "title", value: h.title || "", userName: localUserName });
+                    socket.emit("note:edit", { noteId: id, field: "content", value: h.content || "", userName: localUserName });
                   }
                 }} className="text-[#015958] underline text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0CABA8]">Restore</button>
                 <hr className="my-1" />
