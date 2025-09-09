@@ -5,7 +5,7 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "../components/Button";
 import { BackendError } from "../components/BackendError";
-import { ClipboardList, Calendar, MessageCircle, CheckCircle2, Users, Star, ArrowRight, Play, Server } from "lucide-react";
+import { ClipboardList, Calendar, MessageCircle, CheckCircle2, Users, Star, ArrowRight, Play, Server, Mail, Phone, MapPin, Twitter, Github, Linkedin } from "lucide-react";
 
 const companies = [
   { name: 'Acme Corp' },
@@ -88,30 +88,31 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <main className="min-h-screen flex flex-col bg-gradient-to-br from-[#0FC2C0] via-[#0CABA8] to-[#023535] relative overflow-x-hidden">
+    <main className="min-h-screen flex flex-col bg-gradient-to-br from-[#0FC2C0] via-[#0CABA8] to-[#023535] relative overflow-x-hidden w-full max-w-full">
       {/* Backend Status Banner */}
       {backendStatus === 'unavailable' && (
         <div className="bg-amber-600 text-white px-4 py-2 text-center text-sm z-50 relative">
           <div className="flex items-center justify-center gap-2">
             <Server className="h-4 w-4" />
             <span>Backend API not available. Some features may not work.</span>
-            <Link href="#backend-status" className="underline hover:no-underline ml-2">
-              Learn more
-            </Link>
           </div>
         </div>
       )}
-      {/* Animated Blobs */}
-      <motion.div
-        className="absolute top-[-100px] left-[-100px] w-[400px] h-[400px] rounded-full bg-[#0FC2C0] opacity-30 blur-3xl z-0"
-        animate={{ x: [0, 60, 0], y: [0, 40, 0] }}
-        transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
-      />
-      <motion.div
-        className="absolute bottom-[-120px] right-[-120px] w-[500px] h-[500px] rounded-full bg-[#008F8C] opacity-30 blur-3xl z-0"
-        animate={{ x: [0, -60, 0], y: [0, -40, 0] }}
-        transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
-      />
+      
+      {/* Background Effects Container */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Animated Blobs */}
+        <motion.div
+          className="absolute top-[-100px] left-[-100px] w-[400px] h-[400px] rounded-full bg-[#0FC2C0] opacity-30 blur-3xl"
+          animate={{ x: [0, 60, 0], y: [0, 40, 0] }}
+          transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
+        />
+        <motion.div
+          className="absolute bottom-[-120px] right-[-120px] w-[500px] h-[500px] rounded-full bg-[#008F8C] opacity-30 blur-3xl"
+          animate={{ x: [0, -60, 0], y: [0, -40, 0] }}
+          transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
+        />
+      </div>
       {/* Hero Section */}
       <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-12">
@@ -156,9 +157,9 @@ export default function LandingPage() {
               className="flex items-center gap-1 text-[#015958]"
             >
               {[...Array(5)].map((_, i) => (
-                <Star key={i} className="h-5 w-5 fill-[#0FC2C0] text-[#0FC2C0]" />
+                <Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400 drop-shadow-sm" />
               ))}
-              <span className="ml-2 text-[#015958]">4.9/5 from 2,000+ reviews</span>
+              <span className="ml-2 text-white font-medium drop-shadow">4.9/5 from 2,000+ reviews</span>
             </motion.div>
           </div>
           {/* UI Mockup Illustration - Pure CSS/JSX, no SVG */}
@@ -364,50 +365,94 @@ export default function LandingPage() {
         </div>
       </section>
       
-      {/* Backend Status Section - Development Info */}
-      <section id="backend-status" className="py-20 bg-white/60 backdrop-blur-md">
-        <div className="max-w-4xl mx-auto px-4">
-          <h2 className="text-2xl font-bold text-[#015958] mb-8 text-center">Development Status</h2>
-          <div className="bg-white rounded-xl shadow p-6 border border-[#0FC2C0]/20">
-            {backendStatus === 'checking' && (
-              <div className="text-center">
-                <Server className="h-8 w-8 text-[#0FC2C0] mx-auto mb-4 animate-spin" />
-                <p className="text-[#015958]">Checking backend connection...</p>
-              </div>
-            )}
-            
-            {backendStatus === 'available' && (
-              <div className="text-center">
-                <div className="w-8 h-8 bg-green-500 rounded-full mx-auto mb-4 flex items-center justify-center">
-                  <CheckCircle2 className="h-5 w-5 text-white" />
-                </div>
-                <h3 className="text-lg font-semibold text-green-700 mb-2">Backend API Available</h3>
-                <p className="text-[#015958]">All features are working properly. You can use the full application.</p>
-              </div>
-            )}
-            
-            {backendStatus === 'unavailable' && (
-              <div>
-                <BackendError 
-                  error={new Error("Backend server not running at localhost:4100")} 
-                  retry={() => window.location.reload()} 
-                />
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
-      
       {/* Final CTA */}
       <section className="py-20">
         <div className="max-w-2xl mx-auto text-center">
-          <h2 className="text-3xl font-bold text-[#015958] mb-4">Ready to get started?</h2>
-          <p className="text-lg text-[#015958] mb-8">Join thousands of teams and individuals using WorkSync to get more done, together.</p>
+          <h2 className="text-3xl font-bold text-white mb-4 drop-shadow-lg">Ready to get started?</h2>
+          <p className="text-lg text-white/90 mb-8 drop-shadow">Join thousands of teams and individuals using WorkSync to get more done, together.</p>
           <Link href="/register">
             <Button className="text-lg px-8 py-4 shadow-lg bg-gradient-to-r from-[#0FC2C0] to-[#015958] hover:from-[#0CABA8] hover:to-[#008F8C] text-white">Get Started Free</Button>
           </Link>
         </div>
       </section>
+
+      {/* Footer */}
+      <footer className="bg-[#015958] text-white py-12">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+            {/* Company Info */}
+            <div className="lg:col-span-2">
+              <h3 className="text-2xl font-bold mb-4">WorkSync</h3>
+              <p className="text-white/80 mb-4 max-w-md">
+                The all-in-one productivity platform that helps teams plan, collaborate, and achieve more together. Transform your workflow with intelligent project management.
+              </p>
+              <div className="flex space-x-4">
+                <Link href="https://twitter.com" className="text-white/60 hover:text-[#0FC2C0] transition-colors">
+                  <Twitter className="h-5 w-5" />
+                </Link>
+                <Link href="https://github.com" className="text-white/60 hover:text-[#0FC2C0] transition-colors">
+                  <Github className="h-5 w-5" />
+                </Link>
+                <Link href="https://linkedin.com" className="text-white/60 hover:text-[#0FC2C0] transition-colors">
+                  <Linkedin className="h-5 w-5" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Product */}
+            <div>
+              <h4 className="text-lg font-semibold mb-4">Product</h4>
+              <ul className="space-y-2 text-white/80">
+                <li><Link href="/features" className="hover:text-[#0FC2C0] transition-colors">Features</Link></li>
+                <li><Link href="/pricing" className="hover:text-[#0FC2C0] transition-colors">Pricing</Link></li>
+                <li><Link href="/integrations" className="hover:text-[#0FC2C0] transition-colors">Integrations</Link></li>
+                <li><Link href="/security" className="hover:text-[#0FC2C0] transition-colors">Security</Link></li>
+              </ul>
+            </div>
+
+            {/* Company */}
+            <div>
+              <h4 className="text-lg font-semibold mb-4">Company</h4>
+              <ul className="space-y-2 text-white/80">
+                <li><Link href="/about" className="hover:text-[#0FC2C0] transition-colors">About Us</Link></li>
+                <li><Link href="/careers" className="hover:text-[#0FC2C0] transition-colors">Careers</Link></li>
+                <li><Link href="/blog" className="hover:text-[#0FC2C0] transition-colors">Blog</Link></li>
+                <li><Link href="/contact" className="hover:text-[#0FC2C0] transition-colors">Contact</Link></li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Contact Info */}
+          <div className="border-t border-white/20 pt-8 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-white/80">
+              <div className="flex items-center space-x-3">
+                <Mail className="h-5 w-5 text-[#0FC2C0]" />
+                <span>support@worksync.com</span>
+              </div>
+              <div className="flex items-center space-x-3">
+                <Phone className="h-5 w-5 text-[#0FC2C0]" />
+                <span>+1 (555) 123-4567</span>
+              </div>
+              <div className="flex items-center space-x-3">
+                <MapPin className="h-5 w-5 text-[#0FC2C0]" />
+                <span>San Francisco, CA</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Bar */}
+          <div className="border-t border-white/20 pt-6 flex flex-col md:flex-row justify-between items-center text-white/60">
+            <div className="mb-4 md:mb-0">
+              <p>&copy; 2025 WorkSync. All rights reserved.</p>
+            </div>
+            <div className="flex space-x-6">
+              <Link href="/privacy" className="hover:text-[#0FC2C0] transition-colors">Privacy Policy</Link>
+              <Link href="/terms" className="hover:text-[#0FC2C0] transition-colors">Terms of Service</Link>
+              <Link href="/cookies" className="hover:text-[#0FC2C0] transition-colors">Cookie Policy</Link>
+            </div>
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }
