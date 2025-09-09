@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { api } from "../../../../api";
-import { useToast } from "../../../../components/toast";
+import { api } from "../../../../../api";
+import { useToast } from "../../../../../components/toast";
 import { Edit, ArrowLeft, Calendar } from "lucide-react";
 
 interface Note {

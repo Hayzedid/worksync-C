@@ -208,7 +208,8 @@ export default function EditNotePage() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Enter note title..."
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] focus:border-transparent text-lg"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] focus:border-transparent text-lg text-gray-900 bg-white placeholder-gray-500"
+              style={{ color: '#111827', backgroundColor: '#ffffff' }}
             />
           </div>
 
@@ -223,7 +224,8 @@ export default function EditNotePage() {
               onChange={(e) => setContent(e.target.value)}
               placeholder="Write your note content here..."
               rows={20}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] focus:border-transparent resize-none font-mono"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] focus:border-transparent resize-none font-mono text-gray-900 bg-white placeholder-gray-500"
+              style={{ color: '#111827', backgroundColor: '#ffffff' }}
             />
           </div>
 
