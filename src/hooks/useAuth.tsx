@@ -74,6 +74,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Store token in sessionStorage
         if (typeof window !== 'undefined') {
           sessionStorage.setItem('access_token', data.token);
+          // Trigger a custom event to notify socket provider of authentication change
+          window.dispatchEvent(new CustomEvent('auth-change'));
         }
         
         // Set user data
@@ -165,6 +167,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('access_token');
+      // Trigger a custom event to notify socket provider of authentication change
+      window.dispatchEvent(new CustomEvent('auth-change'));
     }
   };
 

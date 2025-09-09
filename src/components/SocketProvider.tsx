@@ -1,24 +1,69 @@
-import React, { createContext, useContext, useEffect, useRef } from "react";
-import { socket } from "../socket";
+import React, { createContext, useContext, useEffect, useRef, useState } from "react";
+import { initializeSocket, getSocket, disconnectSocket } from "../socket";
+import type { Socket } from 'socket.io-client';
 
-const SocketContext = createContext<typeof socket | null>(null);
+const SocketContext = createContext<Socket | null>(null);
 
 export function SocketProvider({ children }: { children: React.ReactNode }) {
-  const socketRef = useRef(socket);
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const initializationRef = useRef(false);
 
   useEffect(() => {
-    // Connect on mount, disconnect on unmount
-    const currentSocket = socketRef.current;
-    if (!currentSocket.connected) {
-      currentSocket.connect();
+    // Only initialize once
+    if (initializationRef.current) return;
+    
+    // Check if user is authenticated (has token)
+    const token = typeof window !== 'undefined' ? sessionStorage.getItem('access_token') : null;
+    
+    if (token) {
+      console.log('User authenticated, initializing socket connection');
+      const newSocket = initializeSocket();
+      setSocket(newSocket);
+      initializationRef.current = true;
+    } else {
+      console.log('User not authenticated, socket not initialized');
     }
+
     return () => {
-      currentSocket.disconnect();
+      disconnectSocket();
+      setSocket(null);
+      initializationRef.current = false;
+    };
+  }, []);
+
+  // Re-initialize socket when authentication changes
+  useEffect(() => {
+    const checkAuth = () => {
+      const token = typeof window !== 'undefined' ? sessionStorage.getItem('access_token') : null;
+      const currentSocket = getSocket();
+      
+      if (token && !currentSocket?.connected) {
+        console.log('Auth token available, initializing socket');
+        const newSocket = initializeSocket();
+        setSocket(newSocket);
+        initializationRef.current = true;
+      } else if (!token && currentSocket?.connected) {
+        console.log('Auth token removed, disconnecting socket');
+        disconnectSocket();
+        setSocket(null);
+        initializationRef.current = false;
+      }
+    };
+
+    // Listen for auth changes
+    window.addEventListener('auth-change', checkAuth);
+
+    // Check auth status periodically as backup
+    const interval = setInterval(checkAuth, 5000);
+    
+    return () => {
+      window.removeEventListener('auth-change', checkAuth);
+      clearInterval(interval);
     };
   }, []);
 
   return (
-    <SocketContext.Provider value={socketRef.current}>
+    <SocketContext.Provider value={socket}>
       {children}
     </SocketContext.Provider>
   );

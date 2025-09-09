@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { socket } from "../socket";
+import { useSocket } from "../components/SocketProvider";
 import { api } from "../api";
 
 export interface DashboardData {
@@ -48,6 +48,7 @@ export interface DashboardData {
 }
 
 export function useRealTimeDashboard(workspaceId?: number) {
+  const socket = useSocket();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -208,6 +209,13 @@ export function useRealTimeDashboard(workspaceId?: number) {
       });
     };
 
+    // Only set up socket listeners if socket is available (user is authenticated)
+    if (!socket) {
+      console.log('Dashboard: Socket not available (user not authenticated)');
+      setConnectionStatus('disconnected');
+      return;
+    }
+
     // Join workspace room for real-time updates
     if (workspaceId) {
       socket.emit('dashboard:join', { workspaceId });
@@ -244,34 +252,36 @@ export function useRealTimeDashboard(workspaceId?: number) {
     }, 300000); // 5 minutes
 
     return () => {
-      socket.off('connect', handleConnect);
-      socket.off('disconnect', handleDisconnect);
-      socket.off('reconnect', handleReconnect);
-      
-      socket.off('task:created', handleTaskUpdate);
-      socket.off('task:updated', handleTaskUpdate);
-      socket.off('task:deleted', handleTaskUpdate);
-      
-      socket.off('project:created', handleProjectUpdate);
-      socket.off('project:updated', handleProjectUpdate);
-      socket.off('project:deleted', handleProjectUpdate);
-      
-      socket.off('event:created', handleEventUpdate);
-      socket.off('event:updated', handleEventUpdate);
-      socket.off('event:deleted', handleEventUpdate);
-      
-      socket.off('notification:created', handleNotificationUpdate);
-      socket.off('notification:updated', handleNotificationUpdate);
-      
-      socket.off('activity:created', handleActivityUpdate);
+      if (socket) {
+        socket.off('connect', handleConnect);
+        socket.off('disconnect', handleDisconnect);
+        socket.off('reconnect', handleReconnect);
+        
+        socket.off('task:created', handleTaskUpdate);
+        socket.off('task:updated', handleTaskUpdate);
+        socket.off('task:deleted', handleTaskUpdate);
+        
+        socket.off('project:created', handleProjectUpdate);
+        socket.off('project:updated', handleProjectUpdate);
+        socket.off('project:deleted', handleProjectUpdate);
+        
+        socket.off('event:created', handleEventUpdate);
+        socket.off('event:updated', handleEventUpdate);
+        socket.off('event:deleted', handleEventUpdate);
+        
+        socket.off('notification:created', handleNotificationUpdate);
+        socket.off('notification:updated', handleNotificationUpdate);
+        
+        socket.off('activity:created', handleActivityUpdate);
 
-      clearInterval(intervalId);
-
-      if (workspaceId) {
-        socket.emit('dashboard:leave', { workspaceId });
+        if (workspaceId) {
+          socket.emit('dashboard:leave', { workspaceId });
+        }
       }
+      
+      clearInterval(intervalId);
     };
-  }, [workspaceId, connectionStatus, fetchDashboardData]);
+  }, [socket, workspaceId, connectionStatus, fetchDashboardData]);
 
   // Load initial data
   useEffect(() => {
