@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useSocket as useSocketFromProvider } from '../components/SocketProvider';
 
+// Hook for listening to specific socket events
 export function useSocket(event: string, handler: (...args: unknown[]) => void) {
   const socket = useSocketFromProvider();
   
@@ -12,4 +13,9 @@ export function useSocket(event: string, handler: (...args: unknown[]) => void) 
     socket.on(event, wrapped as (...args: unknown[]) => void);
     return () => { socket.off(event, wrapped as (...args: unknown[]) => void); };
   }, [socket, event, handler]);
+}
+
+// Hook for direct socket access (for emitting events)
+export function useSocketConnection() {
+  return useSocketFromProvider();
 }

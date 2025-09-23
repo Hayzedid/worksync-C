@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useSocket } from '../useSocket';
+import { useSocketConnection } from '../useSocket';
 
 export interface ProjectTemplate {
   id: string;
@@ -129,7 +129,7 @@ export interface ProjectTemplateHook {
 }
 
 export function useProjectTemplates(): ProjectTemplateHook {
-  const socket = useSocket();
+  const socket = useSocketConnection();
   
   const [templates, setTemplates] = useState<ProjectTemplate[]>([]);
   const [featuredTemplates, setFeaturedTemplates] = useState<ProjectTemplate[]>([]);

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useSocket } from '../useSocket';
+import { useSocketConnection } from '../useSocket';
 
 // Business Intelligence Interfaces
 export interface BusinessMetric {
@@ -77,6 +77,7 @@ export interface Dashboard {
   isPublic: boolean;
   permissions: DashboardPermissions;
   theme: DashboardTheme;
+  tags: string[];
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
@@ -420,6 +421,46 @@ export interface BehaviorConfig {
   draggable?: boolean;
 }
 
+export interface TooltipConfig {
+  enabled: boolean;
+  format?: string;
+  backgroundColor?: string;
+  textColor?: string;
+  borderColor?: string;
+  borderRadius?: number;
+}
+
+export interface LegendConfig {
+  enabled: boolean;
+  position: 'top' | 'bottom' | 'left' | 'right';
+  orientation?: 'horizontal' | 'vertical';
+  backgroundColor?: string;
+  textColor?: string;
+  fontSize?: string;
+}
+
+export interface ZoomConfig {
+  enabled: boolean;
+  type: 'x' | 'y' | 'xy';
+  rangeMin?: number;
+  rangeMax?: number;
+}
+
+export interface SelectionConfig {
+  enabled: boolean;
+  type: 'single' | 'multiple';
+  mode: 'point' | 'area';
+}
+
+export interface AnnotationConfig {
+  id: string;
+  type: 'line' | 'area' | 'point' | 'text';
+  value: any;
+  label?: string;
+  color?: string;
+  style?: any;
+}
+
 export interface StylingConfig {
   backgroundColor?: string;
   borderColor?: string;
@@ -469,28 +510,6 @@ export interface SeriesConfig {
   smooth?: boolean;
 }
 
-export interface AnnotationConfig {
-  type: 'line' | 'band' | 'point' | 'text';
-  value: any;
-  label?: string;
-  color?: string;
-  style?: Record<string, any>;
-}
-
-export interface ZoomConfig {
-  enabled: boolean;
-  type: 'x' | 'y' | 'xy';
-  wheel?: boolean;
-  drag?: boolean;
-  pan?: boolean;
-}
-
-export interface SelectionConfig {
-  enabled: boolean;
-  type: 'single' | 'multiple' | 'brush';
-  mode: 'point' | 'range';
-}
-
 // State management interface
 export interface BusinessIntelligenceState {
   metrics: BusinessMetric[];
@@ -518,7 +537,7 @@ export const useBusinessIntelligence = (workspaceId?: string) => {
     sortOrder: 'desc',
   });
 
-  const socket = useSocket();
+  const socket = useSocketConnection();
 
   // Load business metrics
   const loadMetrics = useCallback(async () => {
@@ -573,6 +592,51 @@ export const useBusinessIntelligence = (workspaceId?: string) => {
       }));
     }
   }, [workspaceId]);
+
+  // Search metrics and dashboards
+  const searchMetrics = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      // Reset to show all metrics and dashboards
+      loadMetrics();
+      loadDashboards();
+      return;
+    }
+
+    setState(prev => ({ ...prev, isLoading: true, error: undefined }));
+    
+    try {
+      const lowerQuery = query.toLowerCase();
+      
+      // Filter metrics
+      const filteredMetrics = state.metrics.filter(metric =>
+        metric.name.toLowerCase().includes(lowerQuery) ||
+        metric.description.toLowerCase().includes(lowerQuery) ||
+        metric.category.toLowerCase().includes(lowerQuery) ||
+        metric.tags.some(tag => tag.toLowerCase().includes(lowerQuery))
+      );
+
+      // Filter dashboards
+      const filteredDashboards = state.dashboards.filter(dashboard =>
+        dashboard.name.toLowerCase().includes(lowerQuery) ||
+        dashboard.description.toLowerCase().includes(lowerQuery) ||
+        dashboard.category.toLowerCase().includes(lowerQuery) ||
+        dashboard.tags.some(tag => tag.toLowerCase().includes(lowerQuery))
+      );
+      
+      setState(prev => ({
+        ...prev,
+        metrics: filteredMetrics,
+        dashboards: filteredDashboards,
+        isLoading: false,
+      }));
+    } catch (error) {
+      setState(prev => ({
+        ...prev,
+        error: error instanceof Error ? error.message : 'Search failed',
+        isLoading: false,
+      }));
+    }
+  }, [state.metrics, state.dashboards, loadMetrics, loadDashboards]);
 
   // Create business metric
   const createMetric = useCallback(async (metric: Omit<BusinessMetric, 'id' | 'createdAt' | 'updatedAt'>) => {
@@ -906,6 +970,7 @@ export const useBusinessIntelligence = (workspaceId?: string) => {
     actions: {
       loadMetrics,
       loadDashboards,
+      searchMetrics,
       createMetric,
       createDashboard,
       updateDashboard,

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useSocket } from '../useSocket';
+import { useSocketConnection } from '../useSocket';
 
 export interface ResourceAllocation {
   id: string;
@@ -174,7 +174,7 @@ export interface ResourceManagementHook {
 }
 
 export function useResourceAllocation(workspaceId: string): ResourceManagementHook {
-  const socket = useSocket();
+  const socket = useSocketConnection();
   
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [resourceAllocations, setResourceAllocations] = useState<ResourceAllocation[]>([]);

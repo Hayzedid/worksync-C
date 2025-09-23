@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useSocket } from '../useSocket';
+import { useSocketConnection } from '../useSocket';
 
 export interface Milestone {
   id: string;
@@ -135,7 +135,7 @@ export interface MilestoneManagementHook {
 }
 
 export function useMilestoneManagement(workspaceId: string): MilestoneManagementHook {
-  const socket = useSocket();
+  const socket = useSocketConnection();
   
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [milestoneTemplates, setMilestoneTemplates] = useState<MilestoneTemplate[]>([]);

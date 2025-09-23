@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useSocket } from '../useSocket';
+import { useSocketConnection } from '../useSocket';
 import { useAuth } from '../useAuth';
 
 export interface KanbanColumn {
@@ -98,7 +98,12 @@ export interface KanbanBoardHook {
     tags?: string[];
     dueDate?: 'overdue' | 'today' | 'week' | 'month';
   };
-  setFilters: (filters: any) => void;
+  setFilters: (filters: {
+    assignee?: string;
+    priority?: string[];
+    tags?: string[];
+    dueDate?: 'overdue' | 'today' | 'week' | 'month';
+  }) => void;
   
   // Analytics
   getColumnMetrics: (columnId: string) => {
@@ -113,14 +118,25 @@ export function useKanbanBoard(
   boardId: string,
   workspaceId: string
 ): KanbanBoardHook {
-  const socket = useSocket();
+  const socket = useSocketConnection();
   const auth = useAuth();
   
   const [board, setBoard] = useState<KanbanBoard | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeUsers, setActiveUsers] = useState<any[]>([]);
-  const [filters, setFilters] = useState<any>({});
+  const [activeUsers, setActiveUsers] = useState<Array<{
+    id: string;
+    name: string;
+    avatar?: string;
+    cursor?: { x: number; y: number };
+    selectedCard?: string;
+  }>>([]);
+  const [filters, setFilters] = useState<{
+    assignee?: string;
+    priority?: string[];
+    tags?: string[];
+    dueDate?: 'overdue' | 'today' | 'week' | 'month';
+  }>({});
 
   // Initialize board and join collaboration room
   useEffect(() => {
@@ -134,9 +150,9 @@ export function useKanbanBoard(
         // Join the board room for real-time updates
         socket.emit('kanban:join', {
           boardId,
-          userId: auth.user.id,
-          userName: auth.user.name,
-          userAvatar: auth.user.avatar
+          userId: auth.user!.id,
+          userName: auth.user!.name || 'Unknown User',
+          userAvatar: auth.user!.avatar
         });
 
         // Load board data (this would typically come from API)
@@ -159,11 +175,11 @@ export function useKanbanBoard(
               order: 0,
               priority: 'high',
               tags: ['design', 'ui'],
-              assigneeId: auth.user.id,
+              assigneeId: auth.user!.id,
               assignee: {
-                id: auth.user.id,
-                name: auth.user.name,
-                avatar: auth.user.avatar
+                id: auth.user!.id,
+                name: auth.user!.name || 'Unknown User',
+                avatar: auth.user!.avatar
               },
               dueDate: '2025-09-01',
               estimatedHours: 8,
@@ -203,15 +219,15 @@ export function useKanbanBoard(
     initializeBoard();
 
     return () => {
-      socket.emit('kanban:leave', { boardId, userId: auth.user.id });
+      socket.emit('kanban:leave', { boardId, userId: auth.user!.id });
     };
-  }, [socket, boardId, workspaceId, auth?.user?.id]);
+  }, [socket, boardId, workspaceId, auth?.user?.id, auth?.user?.name, auth?.user?.avatar]);
 
   // Socket event listeners for real-time updates
   useEffect(() => {
     if (!socket) return;
 
-    const handleBoardUpdate = (data: any) => {
+    const handleBoardUpdate = (data: Partial<KanbanBoard>) => {
       setBoard(prev => prev ? { ...prev, ...data } : null);
     };
 
@@ -253,7 +269,13 @@ export function useKanbanBoard(
       });
     };
 
-    const handleUsersUpdate = (users: any[]) => {
+    const handleUsersUpdate = (users: Array<{
+      id: string;
+      name: string;
+      avatar?: string;
+      cursor?: { x: number; y: number };
+      selectedCard?: string;
+    }>) => {
       setActiveUsers(users);
     };
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useSocket } from '../useSocket';
+import { useSocketConnection } from '../useSocket';
 import { useAuth } from '../useAuth';
 
 export interface TimeEntry {
@@ -129,7 +129,7 @@ export interface TimeTrackingHook {
 }
 
 export function useTimeTracking(): TimeTrackingHook {
-  const socket = useSocket();
+  const socket = useSocketConnection();
   const auth = useAuth();
   
   const [activeTimer, setActiveTimer] = useState<TimeTrackingTimer | null>(null);
@@ -164,11 +164,11 @@ export function useTimeTracking(): TimeTrackingHook {
         const mockEntries: TimeEntry[] = [
           {
             id: 'entry-1',
-            userId: auth.user.id,
+            userId: auth.user!.id,
             user: {
-              id: auth.user.id,
-              name: auth.user.name,
-              avatar: auth.user.avatar
+              id: auth.user!.id,
+              name: auth.user!.name || 'Unknown User',
+              avatar: auth.user!.avatar
             },
             taskId: 'task-1',
             projectId: 'project-1',
@@ -186,11 +186,11 @@ export function useTimeTracking(): TimeTrackingHook {
           },
           {
             id: 'entry-2',
-            userId: auth.user.id,
+            userId: auth.user!.id,
             user: {
-              id: auth.user.id,
-              name: auth.user.name,
-              avatar: auth.user.avatar
+              id: auth.user!.id,
+              name: auth.user!.name || 'Unknown User',
+              avatar: auth.user!.avatar
             },
             projectId: 'project-1',
             workspaceId: 'workspace-1',
@@ -226,7 +226,7 @@ export function useTimeTracking(): TimeTrackingHook {
     };
 
     loadTimeTrackingData();
-  }, [auth?.user?.id]);
+  }, [auth?.user?.id, auth?.user?.name, auth?.user?.avatar]);
 
   // Update timer elapsed time
   useEffect(() => {
@@ -247,7 +247,7 @@ export function useTimeTracking(): TimeTrackingHook {
   useEffect(() => {
     if (!socket) return;
 
-    const handleTimerUpdate = (data: any) => {
+    const handleTimerUpdate = (data: { timer: TimeTrackingTimer }) => {
       setActiveTimer(data.timer);
     };
 
@@ -296,7 +296,7 @@ export function useTimeTracking(): TimeTrackingHook {
     localStorage.setItem('activeTimer', JSON.stringify(timer));
     
     socket.emit('time:start-timer', {
-      userId: auth.user.id,
+      userId: auth.user!.id,
       timer
     });
   }, [socket, auth?.user?.id]);
@@ -309,11 +309,11 @@ export function useTimeTracking(): TimeTrackingHook {
 
     // Create time entry
     const timeEntry: Omit<TimeEntry, 'id' | 'createdAt' | 'updatedAt'> = {
-      userId: auth.user.id,
+      userId: auth.user!.id,
       user: {
-        id: auth.user.id,
-        name: auth.user.name,
-        avatar: auth.user.avatar
+        id: auth.user!.id,
+        name: auth.user!.name || 'Unknown User',
+        avatar: auth.user!.avatar
       },
       taskId: activeTimer.taskId,
       projectId: activeTimer.projectId,
@@ -329,7 +329,7 @@ export function useTimeTracking(): TimeTrackingHook {
     };
 
     socket.emit('time:stop-timer', {
-      userId: auth.user.id,
+      userId: auth.user!.id,
       timerId: activeTimer.id,
       timeEntry
     });
@@ -370,11 +370,11 @@ export function useTimeTracking(): TimeTrackingHook {
     const newEntry: TimeEntry = {
       ...entry,
       id: `entry-${Date.now()}`,
-      userId: auth.user.id,
+      userId: auth.user!.id,
       user: {
-        id: auth.user.id,
-        name: auth.user.name,
-        avatar: auth.user.avatar
+        id: auth.user!.id,
+        name: auth.user!.name || 'Unknown User',
+        avatar: auth.user!.avatar
       },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
@@ -463,29 +463,6 @@ export function useTimeTracking(): TimeTrackingHook {
     localStorage.setItem('timeTrackingSettings', JSON.stringify(updatedSettings));
   }, [socket, settings]);
 
-  // Analytics
-  const getTotalHoursToday = useCallback(() => {
-    const today = new Date().toDateString();
-    return todayEntries.reduce((sum, entry) => sum + (entry.duration / 3600), 0);
-  }, []);
-
-  const getTotalHoursWeek = useCallback(() => {
-    return weekEntries.reduce((sum, entry) => sum + (entry.duration / 3600), 0);
-  }, []);
-
-  const getAverageHoursPerDay = useCallback(() => {
-    const weekHours = getTotalHoursWeek();
-    return weekHours / 7;
-  }, [getTotalHoursWeek]);
-
-  const getProductivityScore = useCallback(() => {
-    // Mock productivity calculation based on various factors
-    const hoursToday = getTotalHoursToday();
-    const targetHours = 8;
-    const baseScore = Math.min(hoursToday / targetHours, 1) * 100;
-    return Math.round(baseScore);
-  }, [getTotalHoursToday]);
-
   // Team tracking
   const getTeamTimeEntries = useCallback(async (workspaceId: string, startDate: string, endDate: string): Promise<TimeEntry[]> => {
     if (!socket) throw new Error('Socket not connected');
@@ -496,7 +473,13 @@ export function useTimeTracking(): TimeTrackingHook {
     });
   }, [socket]);
 
-  const getTeamUtilization = useCallback(async (workspaceId: string) => {
+  const getTeamUtilization = useCallback(async (workspaceId: string): Promise<Array<{
+    userId: string;
+    userName: string;
+    hoursLogged: number;
+    expectedHours: number;
+    utilization: number;
+  }>> => {
     if (!socket) throw new Error('Socket not connected');
 
     return new Promise((resolve) => {
@@ -517,6 +500,28 @@ export function useTimeTracking(): TimeTrackingHook {
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     return entryDate >= weekAgo;
   });
+
+  // Analytics
+  const getTotalHoursToday = useCallback(() => {
+    return todayEntries.reduce((sum, entry) => sum + (entry.duration / 3600), 0);
+  }, [todayEntries]);
+
+  const getTotalHoursWeek = useCallback(() => {
+    return weekEntries.reduce((sum, entry) => sum + (entry.duration / 3600), 0);
+  }, [weekEntries]);
+
+  const getAverageHoursPerDay = useCallback(() => {
+    const weekHours = getTotalHoursWeek();
+    return weekHours / 7;
+  }, [getTotalHoursWeek]);
+
+  const getProductivityScore = useCallback(() => {
+    // Mock productivity calculation based on various factors
+    const hoursToday = getTotalHoursToday();
+    const targetHours = 8;
+    const baseScore = Math.min(hoursToday / targetHours, 1) * 100;
+    return Math.round(baseScore);
+  }, [getTotalHoursToday]);
 
   return {
     activeTimer,

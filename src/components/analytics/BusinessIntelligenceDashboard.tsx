@@ -2,11 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useBusinessIntelligence } from '../../hooks/analytics/useBusinessIntelligence';
 import './business-intelligence.css';
 
-interface Busin                        <div 
-                          className={`dashboard-category category-${dashboard.category}`}
-                        >
-                          {dashboard.category}
-                        </div>elligenceDashboardProps {
+interface BusinessIntelligenceDashboardProps {
   workspaceId: string;
 }
 

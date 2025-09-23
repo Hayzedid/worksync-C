@@ -3,12 +3,13 @@ import { useEffect, useState, createContext, useContext, ReactNode } from "react
 import { api } from "../api";
 
 interface User {
-  id: number;
+  id: string; // Changed from number to string for consistency
   email: string;
   firstName: string;
   lastName: string;
   userName?: string;
   name?: string; // Computed field
+  avatar?: string; // Added avatar property for time tracking and other features
 }
 
 interface AuthContextType {
@@ -42,6 +43,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const userData = data.user;
         // Add computed name field
         userData.name = `${userData.firstName} ${userData.lastName}`;
+        // Ensure id is string type for consistency
+        userData.id = String(userData.id);
         setUser(userData);
       } else {
         setUser(null);
@@ -81,6 +84,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Set user data
         const userData = data.user;
         userData.name = `${userData.firstName} ${userData.lastName}`;
+        // Ensure id is string type for consistency
+        userData.id = String(userData.id);
         setUser(userData);
         
         return { success: true };
@@ -129,6 +134,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Set user data
         const userInfo = data.user;
         userInfo.name = `${userInfo.firstName} ${userInfo.lastName}`;
+        // Ensure id is string type for consistency
+        userInfo.id = String(userInfo.id);
         setUser(userInfo);
         
         return { success: true };

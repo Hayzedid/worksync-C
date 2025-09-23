@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useSocket } from '../useSocket';
+import { useSocketConnection } from '../useSocket';
 
 // Data Visualization Interfaces
 export interface VisualizationEngine {
@@ -510,6 +510,8 @@ export interface DataVisualizationState {
   themes: VisualizationTheme[];
   plugins: VisualizationPlugin[];
   templates: VisualizationTemplate[];
+  charts: any[]; // Add charts array
+  currentChart?: any; // Add current chart
   activeEngine?: VisualizationEngine;
   activeTheme?: VisualizationTheme;
   isLoading: boolean;
@@ -528,12 +530,13 @@ export const useDataVisualization = (workspaceId?: string) => {
     themes: [],
     plugins: [],
     templates: [],
+    charts: [], // Initialize charts array
     isLoading: false,
     searchQuery: '',
     filters: {},
   });
 
-  const socket = useSocket();
+  const socket = useSocketConnection();
 
   // Load visualization engines
   const loadEngines = useCallback(async () => {
