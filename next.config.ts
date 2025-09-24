@@ -8,12 +8,16 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   async rewrites() {
-    return [
-      {
-        source: "/api/:path*",
-        destination: "http://localhost:4100/api/:path*",
-      },
-    ];
+    // Only rewrite API calls in development
+    if (process.env.NODE_ENV === 'development') {
+      return [
+        {
+          source: "/api/:path*",
+          destination: "http://localhost:4100/api/:path*",
+        },
+      ];
+    }
+    return [];
   },
   async headers() {
     return [
