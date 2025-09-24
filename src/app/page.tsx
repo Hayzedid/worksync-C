@@ -70,7 +70,7 @@ export default function LandingPage() {
   React.useEffect(() => {
     const checkBackend = async () => {
       try {
-        const response = await fetch('/api/health', {
+        const response = await fetch('https://worksync-b.onrender.com/api/health', {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
         });
