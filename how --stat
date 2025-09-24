@@ -1,0 +1,27 @@
+[1mdiff --git a/next.config.ts b/next.config.ts[m
+[1mindex c726ec5..e748f3a 100644[m
+[1m--- a/next.config.ts[m
+[1m+++ b/next.config.ts[m
+[36m@@ -8,12 +8,16 @@[m [mconst nextConfig: NextConfig = {[m
+     ignoreDuringBuilds: true,[m
+   },[m
+   async rewrites() {[m
+[31m-    return [[m
+[31m-      {[m
+[31m-        source: "/api/:path*",[m
+[31m-        destination: "http://localhost:4100/api/:path*",[m
+[31m-      },[m
+[31m-    ];[m
+[32m+[m[32m    // Only rewrite API calls in development[m
+[32m+[m[32m    if (process.env.NODE_ENV === 'development') {[m
+[32m+[m[32m      return [[m
+[32m+[m[32m        {[m
+[32m+[m[32m          source: "/api/:path*",[m
+[32m+[m[32m          destination: "http://localhost:4100/api/:path*",[m
+[32m+[m[32m        },[m
+[32m+[m[32m      ];[m
+[32m+[m[32m    }[m
+[32m+[m[32m    return [];[m
+   },[m
+   async headers() {[m
+     return [[m
