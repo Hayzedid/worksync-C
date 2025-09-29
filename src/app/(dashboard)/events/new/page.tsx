@@ -14,6 +14,8 @@ export default function NewEventPage() {
   const [endDate, setEndDate] = useState("");
   const [endTime, setEndTime] = useState("");
   const [category, setCategory] = useState<string>("meeting");
+  const [singleDayEvent, setSingleDayEvent] = useState(false);
+  const [isEditingDateTime, setIsEditingDateTime] = useState(false);
   // Repeat controls
   const [repeatEnabled, setRepeatEnabled] = useState(false);
   const [repeatDays, setRepeatDays] = useState<number>(1);
@@ -66,12 +68,18 @@ export default function NewEventPage() {
       }
       const sd = startDate;
       const st = allDay ? "00:00" : (startTime || "09:00");
-      const ed = endDate || startDate;
+      // Smart end date logic - use start date if single-day event
+      const ed = singleDayEvent ? startDate : (endDate || startDate);
       const et = allDay ? "23:59" : (endTime || startTime || "10:00");
       const start = new Date(`${sd}T${st}`);
       const end = new Date(`${ed}T${et}`);
+      
+      // Better error messages for single vs multi-day events
       if (end < start) {
-        throw new Error("End must be after start");
+        throw new Error(singleDayEvent ? 
+          "End time must be after start time" : 
+          "End must be after start"
+        );
       }
 
       // Helper to add days
@@ -147,77 +155,136 @@ export default function NewEventPage() {
             </select>
           </div>
           {/* Prefilled summary and toggle */}
-          {hasPrefill ? (
-            <div className="rounded border border-[#0CABA8]/30 p-3 bg-[#F6FFFE] text-[#015958]">
-              <div className="font-semibold mb-1">When</div>
-              <div>
+          {hasPrefill && !isEditingDateTime ? (
+            <div className="rounded-lg border border-[#0CABA8]/30 p-4 bg-[#F6FFFE] text-[#015958]">
+              <div className="font-semibold mb-2 text-lg">📅 Event Preview</div>
+              <div className="mb-3">
                 {allDay ? (
-                  <span>{startDate}</span>
+                  <span className="text-base">
+                    {startDate}
+                    {singleDayEvent ? ' (Single day)' : 
+                      endDate && endDate !== startDate ? ` → ${endDate}` : ''} 
+                    (All day)
+                  </span>
                 ) : (
-                  <span>{startDate} {startTime} → {(endDate || startDate)} {endTime || startTime}</span>
+                  <span className="text-base">
+                    {startDate} {startTime} → {singleDayEvent ? 
+                      (endTime || startTime) : 
+                      `${endDate || startDate} ${endTime || startTime}`}
+                  </span>
                 )}
               </div>
-              <button type="button" className="mt-2 text-[#0CABA8] underline" onClick={() => {
-                // reveal inputs by unsetting prefill flag (clear the query's indicator)
-                // simplest approach: set hasPrefill false by clearing startDate
-                setEndDate(endDate || startDate);
-                // no-op: inputs below are conditionally hidden based on hasPrefill
-                // We can't mutate searchParams here; just inform user to edit below by toggling state
-              }}>Edit date/time below</button>
+              <button 
+                type="button" 
+                className="mt-2 bg-[#0FC2C0] text-white px-4 py-2 rounded-lg hover:bg-[#0CABA8] transition-colors font-medium" 
+                onClick={() => setIsEditingDateTime(true)}
+              >
+                ✏️ Edit date/time
+              </button>
             </div>
           ) : null}
-          <div className="flex items-center gap-3">
-            <input id="allDay" type="checkbox" checked={allDay} onChange={e => setAllDay(e.target.checked)} />
-            <label htmlFor="allDay" className="text-[#015958]">All-day event</label>
-          </div>
-          {!hasPrefill && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-[#015958] font-semibold mb-1">Start date</label>
-              <input 
-                type="date" 
-                value={startDate} 
-                onChange={e => setStartDate(e.target.value)} 
-                aria-label="Event start date"
-                className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" 
-                required 
-              />
-            </div>
-            {!allDay && (
-              <div>
-                <label className="block text-[#015958] font-semibold mb-1">Start time</label>
-                <input 
-                  type="time" 
-                  value={startTime} 
-                  onChange={e => setStartTime(e.target.value)} 
-                  aria-label="Event start time"
-                  className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" 
-                />
+
+          {/* Date/Time Controls - shown when editing or no prefill */}
+          {(!hasPrefill || isEditingDateTime) && (
+            <div className="space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-[#015958]">📅 Event Schedule</h3>
+                {hasPrefill && isEditingDateTime && (
+                  <button 
+                    type="button" 
+                    className="text-[#0CABA8] hover:text-[#015958] font-medium" 
+                    onClick={() => setIsEditingDateTime(false)}
+                  >
+                    Done Editing
+                  </button>
+                )}
               </div>
-            )}
-            <div>
-              <label className="block text-[#015958] font-semibold mb-1">End date</label>
-              <input 
-                type="date" 
-                value={endDate} 
-                onChange={e => setEndDate(e.target.value)} 
-                aria-label="Event end date"
-                className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" 
-              />
-            </div>
-            {!allDay && (
-              <div>
-                <label className="block text-[#015958] font-semibold mb-1">End time</label>
-                <input 
-                  type="time" 
-                  value={endTime} 
-                  onChange={e => setEndTime(e.target.value)} 
-                  aria-label="Event end time"
-                  className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" 
-                />
+
+              <div className="flex items-center gap-6">
+                <label className="flex items-center gap-2">
+                  <input 
+                    id="allDay" 
+                    type="checkbox" 
+                    checked={allDay} 
+                    onChange={e => setAllDay(e.target.checked)}
+                    className="h-4 w-4 text-[#0FC2C0] focus:ring-[#0FC2C0] border-[#0CABA8]/30 rounded"
+                  />
+                  <span className="text-[#015958] font-medium">All-day event</span>
+                </label>
+
+                <label className="flex items-center gap-2">
+                  <input 
+                    id="singleDay" 
+                    type="checkbox" 
+                    checked={singleDayEvent} 
+                    onChange={e => setSingleDayEvent(e.target.checked)}
+                    className="h-4 w-4 text-[#0FC2C0] focus:ring-[#0FC2C0] border-[#0CABA8]/30 rounded"
+                  />
+                  <span className="text-[#015958] font-medium">Single-day event</span>
+                  <span className="text-sm text-gray-500">(end date = start date)</span>
+                </label>
               </div>
-            )}
-          </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[#015958] font-semibold mb-1">Start date</label>
+                  <input 
+                    type="date" 
+                    value={startDate} 
+                    onChange={e => setStartDate(e.target.value)} 
+                    aria-label="Event start date"
+                    className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" 
+                    required 
+                  />
+                </div>
+                {!allDay && (
+                  <div>
+                    <label className="block text-[#015958] font-semibold mb-1">Start time</label>
+                    <input 
+                      type="time" 
+                      value={startTime} 
+                      onChange={e => setStartTime(e.target.value)} 
+                      aria-label="Event start time"
+                      className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" 
+                    />
+                  </div>
+                )}
+                
+                {/* End date - only show if not single-day event */}
+                {!singleDayEvent && (
+                  <div>
+                    <label className="block text-[#015958] font-semibold mb-1">End date</label>
+                    <input 
+                      type="date" 
+                      value={endDate} 
+                      onChange={e => setEndDate(e.target.value)} 
+                      aria-label="Event end date"
+                      className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" 
+                    />
+                  </div>
+                )}
+                
+                {!allDay && (
+                  <div>
+                    <label className="block text-[#015958] font-semibold mb-1">End time</label>
+                    <input 
+                      type="time" 
+                      value={endTime} 
+                      onChange={e => setEndTime(e.target.value)} 
+                      aria-label="Event end time"
+                      className="w-full px-4 py-2 rounded border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-[#F6FFFE]" 
+                    />
+                  </div>
+                )}
+              </div>
+
+              {singleDayEvent && (
+                <div className="text-sm text-blue-600 bg-blue-50 p-3 rounded-lg border border-blue-200">
+                  <strong>📅 Single-day event:</strong> This event will use the start date as both start and end date. 
+                  {!allDay && " You can still set different start and end times."}
+                </div>
+              )}
+            </div>
           )}
 
           {/* Repeat Controls */}
