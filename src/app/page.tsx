@@ -75,7 +75,9 @@ export default function LandingPage() {
   React.useEffect(() => {
     const checkBackend = async () => {
       try {
-        const response = await fetch('https://worksync-b.onrender.com/api/health', {
+        const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4100/api';
+        console.log('API Base URL:', apiBaseUrl);
+        const response = await fetch(`${apiBaseUrl}/health`, {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
         });
@@ -106,7 +108,8 @@ export default function LandingPage() {
     setNewsletterMessage('');
 
     try {
-      const response = await fetch('https://worksync-b.onrender.com/api/newsletter/subscribe', {
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4100/api';
+      const response = await fetch(`${apiBaseUrl}/newsletter/subscribe`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -19,11 +19,12 @@ const nextConfig: NextConfig = {
     }
     return [];
   },
-  env: {
-    NEXT_PUBLIC_API_BASE_URL: "https://worksync-b.onrender.com",
-    NEXT_PUBLIC_WEBSOCKET_URL: "wss://worksync-b.onrender.com",
-    NEXT_PUBLIC_BACKEND_ORIGIN: "https://worksync-b.onrender.com",
-  },
+  // Environment variables are now handled via .env files
+  // env: {
+  //   NEXT_PUBLIC_API_BASE_URL: "https://worksync-b.onrender.com",
+  //   NEXT_PUBLIC_WEBSOCKET_URL: "wss://worksync-b.onrender.com",
+  //   NEXT_PUBLIC_BACKEND_ORIGIN: "https://worksync-b.onrender.com",
+  // },
   async headers() {
     return [
       {
