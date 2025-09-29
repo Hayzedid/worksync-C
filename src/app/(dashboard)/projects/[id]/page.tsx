@@ -266,7 +266,7 @@ import StatusSelect from "../../../../components/StatusSelect";
                         <span className="text-xs text-[#0CABA8]">{t.status ?? "todo"}</span>
                         <button
                           onClick={() => openTaskDeleteConfirm(t.id, t.title)}
-                          className="text-red-600 hover:text-red-700"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded-md transition-all duration-200"
                           type="button"
                           aria-label="Delete task"
                           title="Delete task"

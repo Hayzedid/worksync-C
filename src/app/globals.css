@@ -171,13 +171,16 @@ main {
 
 /* Global icon utilities */
 .icon-comment {
-  width: 28px !important; /* larger size */
-  height: 28px !important;
-  transform: translateY(15px) !important;
+  width: 20px !important;
+  height: 20px !important;
 }
 
 .icon-delete {
-  width: 28px !important;
-  height: 28px !important;
-  transform: translateY(15px) !important;
+  width: 18px !important;
+  height: 18px !important;
+  transition: all 0.2s ease;
+}
+
+.icon-delete:hover {
+  transform: scale(1.1);
 }
