@@ -65,6 +65,11 @@ const testimonials = [
 export default function LandingPage() {
   // Backend status check for development feedback
   const [backendStatus, setBackendStatus] = useState<'checking' | 'available' | 'unavailable'>('checking');
+  
+  // Newsletter subscription state
+  const [newsletterEmail, setNewsletterEmail] = useState('');
+  const [newsletterStatus, setNewsletterStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [newsletterMessage, setNewsletterMessage] = useState('');
 
   // Check backend status on component mount
   React.useEffect(() => {
@@ -86,6 +91,44 @@ export default function LandingPage() {
 
     checkBackend();
   }, []);
+
+  // Newsletter subscription handler
+  const handleNewsletterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!newsletterEmail || !newsletterEmail.includes('@')) {
+      setNewsletterStatus('error');
+      setNewsletterMessage('Please enter a valid email address');
+      return;
+    }
+
+    setNewsletterStatus('loading');
+    setNewsletterMessage('');
+
+    try {
+      const response = await fetch('https://worksync-b.onrender.com/api/newsletter/subscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: newsletterEmail }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setNewsletterStatus('success');
+        setNewsletterMessage(data.message || 'Thank you for subscribing! We\'ll keep you updated.');
+        setNewsletterEmail('');
+      } else {
+        const errorData = await response.json();
+        setNewsletterStatus('error');
+        setNewsletterMessage(errorData.message || 'Something went wrong. Please try again.');
+      }
+    } catch (error) {
+      setNewsletterStatus('error');
+      setNewsletterMessage('Network error. Please check your connection and try again.');
+    }
+  };
 
   return (
     <main className="min-h-screen flex flex-col bg-gradient-to-br from-[#0FC2C0] via-[#0CABA8] to-[#023535] relative overflow-x-hidden w-full max-w-full">
@@ -121,7 +164,7 @@ export default function LandingPage() {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8 }}
-              className="text-5xl md:text-7xl font-bold bg-gradient-to-r from-[#0FC2C0] to-[#015958] bg-clip-text text-transparent mb-6 drop-shadow"
+              className="text-5xl md:text-7xl font-bold bg-gradient-to-r from-[#023535] to-[#011a1a] bg-clip-text text-transparent mb-6 drop-shadow"
             >
                 WorkSync: All-in-One Productivity
             </motion.h1>
@@ -333,10 +376,35 @@ export default function LandingPage() {
         <div className="max-w-xl mx-auto px-4 text-center">
           <h2 className="text-2xl font-bold text-[#015958] mb-4">Stay in the Loop</h2>
           <p className="text-[#015958] mb-6">Get updates on new features, tips, and the upcoming live demo.</p>
-          <form className="flex flex-col sm:flex-row gap-4 justify-center">
-            <input aria-label="Newsletter email" type="email" placeholder="Your email" className="px-6 py-3 rounded-lg border border-[#0FC2C0]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-white flex-1" />
-            <Button type="submit" className="bg-gradient-to-r from-[#0FC2C0] to-[#015958] hover:from-[#0CABA8] hover:to-[#008F8C] text-white px-8 py-3 rounded-lg font-semibold shadow transition">Subscribe</Button>
+          <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row gap-4 justify-center">
+            <input 
+              aria-label="Newsletter email" 
+              type="email" 
+              placeholder="Your email" 
+              value={newsletterEmail}
+              onChange={(e) => setNewsletterEmail(e.target.value)}
+              disabled={newsletterStatus === 'loading'}
+              className="px-6 py-3 rounded-lg border border-[#0FC2C0]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] text-[#015958] bg-white flex-1 disabled:opacity-50 disabled:cursor-not-allowed" 
+            />
+            <Button 
+              type="submit" 
+              disabled={newsletterStatus === 'loading'}
+              className="bg-gradient-to-r from-[#0FC2C0] to-[#015958] hover:from-[#0CABA8] hover:to-[#008F8C] text-white px-8 py-3 rounded-lg font-semibold shadow transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {newsletterStatus === 'loading' ? 'Subscribing...' : 'Subscribe'}
+            </Button>
           </form>
+          
+          {/* Status Messages */}
+          {newsletterMessage && (
+            <div className={`mt-4 p-3 rounded-lg text-sm ${
+              newsletterStatus === 'success' 
+                ? 'bg-green-100 text-green-800 border border-green-200' 
+                : 'bg-red-100 text-red-800 border border-red-200'
+            }`}>
+              {newsletterMessage}
+            </div>
+          )}
         </div>
       </section>
       {/* Testimonials Section */}
@@ -427,15 +495,15 @@ export default function LandingPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-white/80">
               <div className="flex items-center space-x-3">
                 <Mail className="h-5 w-5 text-[#0FC2C0]" />
-                <span>support@worksync.com</span>
+                <span>support@worksync.ng</span>
               </div>
               <div className="flex items-center space-x-3">
                 <Phone className="h-5 w-5 text-[#0FC2C0]" />
-                <span>+1 (555) 123-4567</span>
+                <span>+234 (0) 800 123 4567</span>
               </div>
               <div className="flex items-center space-x-3">
                 <MapPin className="h-5 w-5 text-[#0FC2C0]" />
-                <span>San Francisco, CA</span>
+                <span>Lagos, Nigeria</span>
               </div>
             </div>
           </div>
