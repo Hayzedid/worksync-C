@@ -50,6 +50,8 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const pathname = usePathname();
 
   // Get current page for presence
@@ -65,6 +67,22 @@ export default function DashboardLayout({
   // Get users on current page for display
   const pageUsers = getUsersOnPage(currentPage);
   // Workspace selection moved to dedicated page
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showNotifications || showProfileMenu) {
+        const target = event.target as HTMLElement;
+        if (!target.closest('.notifications-dropdown') && !target.closest('.profile-dropdown')) {
+          setShowNotifications(false);
+          setShowProfileMenu(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showNotifications, showProfileMenu]);
 
   // Redirect unauthenticated users (side-effect, not during render)
   // If there is a token but no user yet, attempt a single refresh instead of redirecting.
@@ -216,19 +234,55 @@ export default function DashboardLayout({
               {/* Header Icons - Properly aligned */}
               <div className="flex items-center gap-x-1">
                 {/* Notifications */}
-                <div className="relative group">
+                <div className="relative">
                   <button 
+                    onClick={() => setShowNotifications(!showNotifications)}
                     className="p-2 text-white/90 hover:text-[#015958] transition-colors duration-200 rounded-full hover:bg-white/10"
                     aria-label="View notifications"
                   >
                     <Bell className="h-5 w-5" />
+                    {/* Notification badge */}
+                    <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                      3
+                    </span>
                   </button>
-                  <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-max -translate-x-1/2 rounded bg-[#015958] px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity">View notifications</span>
+                  
+                  {/* Notifications Dropdown */}
+                  {showNotifications && (
+                    <div className="notifications-dropdown absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                      <div className="p-4 border-b border-gray-200">
+                        <h3 className="text-lg font-medium text-gray-900">Notifications</h3>
+                      </div>
+                      <div className="max-h-96 overflow-y-auto">
+                        <div className="p-3 border-b hover:bg-gray-50 cursor-pointer">
+                          <p className="text-sm font-medium text-gray-900">New task assigned</p>
+                          <p className="text-xs text-gray-500 mt-1">You have been assigned to "Update Dashboard UI"</p>
+                          <p className="text-xs text-blue-600 mt-1">2 minutes ago</p>
+                        </div>
+                        <div className="p-3 border-b hover:bg-gray-50 cursor-pointer">
+                          <p className="text-sm font-medium text-gray-900">Project updated</p>
+                          <p className="text-xs text-gray-500 mt-1">WorkSync project status changed to "In Progress"</p>
+                          <p className="text-xs text-blue-600 mt-1">1 hour ago</p>
+                        </div>
+                        <div className="p-3 hover:bg-gray-50 cursor-pointer">
+                          <p className="text-sm font-medium text-gray-900">Deadline reminder</p>
+                          <p className="text-xs text-gray-500 mt-1">Task "Fix login issues" is due tomorrow</p>
+                          <p className="text-xs text-blue-600 mt-1">3 hours ago</p>
+                        </div>
+                      </div>
+                      <div className="p-3 border-t border-gray-200">
+                        <button className="w-full text-center text-sm text-blue-600 hover:text-blue-800">
+                          View all notifications
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Profile dropdown */}
-                <div className="relative group">
+                <div className="relative">
                   <button 
+                    onClick={() => setShowProfileMenu(!showProfileMenu)}
                     aria-label="Open profile menu" 
                     className="p-2 text-white hover:text-[#015958] transition-colors duration-200 rounded-full hover:bg-white/10"
                   >
@@ -236,7 +290,44 @@ export default function DashboardLayout({
                       <User className="h-4 w-4 text-white" />
                     </div>
                   </button>
-                  <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-max -translate-x-1/2 rounded bg-[#015958] px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity">Profile</span>
+                  
+                  {/* Profile Dropdown */}
+                  {showProfileMenu && (
+                    <div className="profile-dropdown absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                      <div className="p-3 border-b border-gray-200">
+                        <p className="text-sm font-medium text-gray-900">{auth?.user?.firstName} {auth?.user?.lastName}</p>
+                        <p className="text-xs text-gray-500">{auth?.user?.email}</p>
+                      </div>
+                      <div className="py-1">
+                        <Link
+                          href="/settings"
+                          className="flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          onClick={() => setShowProfileMenu(false)}
+                        >
+                          <Settings className="h-4 w-4 mr-2" />
+                          Settings
+                        </Link>
+                        <Link
+                          href="/profile"
+                          className="flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          onClick={() => setShowProfileMenu(false)}
+                        >
+                          <User className="h-4 w-4 mr-2" />
+                          Profile
+                        </Link>
+                        <button
+                          onClick={() => {
+                            setShowProfileMenu(false);
+                            handleLogout();
+                          }}
+                          className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          <LogOut className="h-4 w-4 mr-2" />
+                          Sign out
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Logout */}
