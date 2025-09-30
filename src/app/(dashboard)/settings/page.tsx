@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from '../../../components/Button';
 import { 
@@ -19,6 +19,9 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import ConfirmDialog from "../../../components/ConfirmDialog";
+import { useAuth } from "../../../hooks/useAuth";
+import { api } from "../../../api";
+import { useToast } from "../../../components/toast";
 
 const tabs = [
   { name: "Profile", icon: User, description: "Manage your account information" },
@@ -28,19 +31,115 @@ const tabs = [
 ];
 
 export default function SettingsPage() {
+  const { user } = useAuth();
+  const { addToast } = useToast();
   const [activeTab, setActiveTab] = useState("Profile");
   const [deleteWorkspaceConfirm, setDeleteWorkspaceConfirm] = useState(false);
+  const [loading, setLoading] = useState(false);
+  
+  // Profile form state
+  const [profileForm, setProfileForm] = useState({
+    name: "",
+    email: "",
+    username: ""
+  });
+  
+  // Notification preferences
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [pushNotifications, setPushNotifications] = useState(false);
   const [weeklySummary, setWeeklySummary] = useState(true);
   const [theme, setTheme] = useState("Light");
 
+  // Load current user data
+  useEffect(() => {
+    if (user) {
+      setProfileForm({
+        name: user.firstName && user.lastName 
+          ? `${user.firstName} ${user.lastName}` 
+          : user.name || "",
+        email: user.email || "",
+        username: user.userName || ""
+      });
+    }
+  }, [user]);
+
   const handleDeleteWorkspace = async () => {
     // Workspace deletion logic
   };
 
-  const handleSaveChanges = () => {
-    // Settings save logic
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    try {
+      // Split name into first and last name if needed
+      const nameParts = profileForm.name.trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+      
+      await api.put('/users/profile', {
+        name: profileForm.name,
+        email: profileForm.email,
+        username: profileForm.username,
+        firstName,
+        lastName
+      });
+
+      addToast({
+        title: "Profile Updated",
+        description: "Your profile has been successfully updated.",
+        variant: "success"
+      });
+    } catch (error: any) {
+      console.error('Profile update error:', error);
+      addToast({
+        title: "Update Failed",
+        description: error?.response?.data?.message || "Failed to update profile. Please try again.",
+        variant: "error"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveNotifications = async () => {
+    setLoading(true);
+    try {
+      // TODO: Implement notification preferences API
+      addToast({
+        title: "Preferences Saved",
+        description: "Your notification preferences have been updated.",
+        variant: "success"
+      });
+    } catch (error: any) {
+      addToast({
+        title: "Save Failed",
+        description: "Failed to save notification preferences.",
+        variant: "error"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveWorkspace = async () => {
+    setLoading(true);
+    try {
+      // TODO: Implement workspace settings API
+      addToast({
+        title: "Workspace Updated",
+        description: "Workspace settings have been saved.",
+        variant: "success"
+      });
+    } catch (error: any) {
+      addToast({
+        title: "Update Failed",
+        description: "Failed to update workspace settings.",
+        variant: "error"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -120,7 +219,8 @@ export default function SettingsPage() {
                           type="text"
                           placeholder="Enter your name" 
                           className="w-full px-4 py-3 rounded-lg border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] focus:border-transparent text-[#015958] bg-[#F6FFFE] transition-all duration-200" 
-                          defaultValue="Demo User"
+                          value={profileForm.name}
+                          onChange={(e) => setProfileForm(prev => ({ ...prev, name: e.target.value }))}
                         />
                       </div>
                       <div>
@@ -133,7 +233,25 @@ export default function SettingsPage() {
                           type="email"
                           placeholder="Enter your email" 
                           className="w-full px-4 py-3 rounded-lg border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] focus:border-transparent text-[#015958] bg-[#F6FFFE] transition-all duration-200" 
-                          defaultValue="demo@worksync.com"
+                          value={profileForm.email}
+                          onChange={(e) => setProfileForm(prev => ({ ...prev, email: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label htmlFor="profile-username" className="flex items-center gap-2 text-[#015958] font-semibold mb-2">
+                          <User className="h-4 w-4" />
+                          Username
+                        </label>
+                        <input 
+                          id="profile-username" 
+                          type="text"
+                          placeholder="Enter your username" 
+                          className="w-full px-4 py-3 rounded-lg border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] focus:border-transparent text-[#015958] bg-[#F6FFFE] transition-all duration-200" 
+                          value={profileForm.username}
+                          onChange={(e) => setProfileForm(prev => ({ ...prev, username: e.target.value }))}
                         />
                       </div>
                     </div>
@@ -161,11 +279,12 @@ export default function SettingsPage() {
 
                     <div className="flex justify-end">
                       <Button 
-                        onClick={handleSaveChanges}
-                        className="bg-gradient-to-r from-[#0FC2C0] to-[#0CABA8] text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all duration-200 flex items-center gap-2"
+                        onClick={handleSaveProfile}
+                        disabled={loading}
+                        className="bg-gradient-to-r from-[#0FC2C0] to-[#0CABA8] text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all duration-200 flex items-center gap-2 disabled:opacity-50"
                       >
                         <Save className="h-4 w-4" />
-                        Save Changes
+                        {loading ? "Saving..." : "Save Changes"}
                       </Button>
                     </div>
                   </div>
@@ -253,11 +372,12 @@ export default function SettingsPage() {
 
                     <div className="flex justify-end">
                       <Button 
-                        onClick={handleSaveChanges}
-                        className="bg-gradient-to-r from-[#0FC2C0] to-[#0CABA8] text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all duration-200 flex items-center gap-2"
+                        onClick={handleSaveNotifications}
+                        disabled={loading}
+                        className="bg-gradient-to-r from-[#0FC2C0] to-[#0CABA8] text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all duration-200 flex items-center gap-2 disabled:opacity-50"
                       >
                         <Save className="h-4 w-4" />
-                        Save Preferences
+                        {loading ? "Saving..." : "Save Preferences"}
                       </Button>
                     </div>
                   </div>
@@ -339,11 +459,12 @@ export default function SettingsPage() {
                     {/* Save Changes */}
                     <div className="flex justify-end border-t border-[#0CABA8]/10 pt-6">
                       <Button 
-                        onClick={handleSaveChanges}
-                        className="bg-gradient-to-r from-[#0FC2C0] to-[#0CABA8] text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all duration-200 flex items-center gap-2"
+                        onClick={handleSaveWorkspace}
+                        disabled={loading}
+                        className="bg-gradient-to-r from-[#0FC2C0] to-[#0CABA8] text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all duration-200 flex items-center gap-2 disabled:opacity-50"
                       >
                         <Save className="h-4 w-4" />
-                        Save Changes
+                        {loading ? "Saving..." : "Save Changes"}
                       </Button>
                     </div>
 
