@@ -329,18 +329,6 @@ export default function DashboardLayout({
                     </div>
                   )}
                 </div>
-
-                {/* Logout */}
-                <div className="relative group">
-                  <button 
-                    onClick={handleLogout} 
-                    className="p-2 text-white hover:text-[#015958] transition-colors duration-200 rounded-full hover:bg-white/10" 
-                    aria-label="Logout"
-                  >
-                    <LogOut className="h-5 w-5" />
-                  </button>
-                  <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-max -translate-x-1/2 rounded bg-[#015958] px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity">Logout</span>
-                </div>
               </div>
             </div>
           </div>
