@@ -62,6 +62,15 @@ export default function NewEventPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
+    
+    // Debug auth token
+    const token = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
+    if (!token) {
+      setError("No authentication token found. Please log in again.");
+      addToast({ title: "Authentication Error", description: "Please log in again", variant: "error" });
+      router.push('/login');
+      return;
+    }
     try {
       if (!title || !startDate) {
         throw new Error("Title and start date are required");

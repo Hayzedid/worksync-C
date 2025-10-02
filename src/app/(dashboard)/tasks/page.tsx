@@ -184,6 +184,12 @@ export default function TasksPage() {
   });
   
   // Also fetch projects to resolve names when tasks only provide projectId
+  const { data: workspaceData } = useQuery<unknown>({
+    queryKey: ['workspace', effectiveWsId],
+    queryFn: () => effectiveWsId ? api.get(`/workspaces/${effectiveWsId}`) : null,
+    enabled: effectiveWsId != null
+  });
+
   const { data: projectsData } = useQuery<unknown>({
     queryKey: ["projects", { workspace_id: effectiveWsId }],
     queryFn: () => api.get("/projects", { params: effectiveWsId != null ? { workspace_id: effectiveWsId } : undefined }),
@@ -304,7 +310,7 @@ export default function TasksPage() {
             <h1 className="text-3xl font-bold text-[#0FC2C0]">Tasks</h1>
             {effectiveWsId != null && (
               <div className="text-sm text-[#0CABA8] mt-1">
-                Showing tasks for workspace ID: {effectiveWsId}
+                {((workspaceData as Record<string, unknown>)?.workspace as { name?: string })?.name || `Workspace ${effectiveWsId}`}
               </div>
             )}
           </div>

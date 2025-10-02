@@ -35,7 +35,9 @@ async function request(path: string, options: RequestInit = {}, params?: Record<
   const isMultipart = isFormData(options.body as unknown);
 
   // Get token for Bearer auth
-  const token = typeof window !== 'undefined' ? sessionStorage.getItem('access_token') : null;
+  const token = typeof window !== 'undefined' 
+    ? sessionStorage.getItem('access_token') || localStorage.getItem('access_token') 
+    : null;
 
   // Merge options first to avoid overwriting our headers later
   const finalOptions: RequestInit = {

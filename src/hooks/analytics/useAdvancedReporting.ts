@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useSocket } from '../useSocket';
+import { useSocketConnection } from '../useSocket';
 
 // Advanced Reporting Interfaces
 export interface ReportTemplate {
@@ -285,7 +285,7 @@ export const useAdvancedReporting = (workspaceId?: string) => {
     },
   });
 
-  const socket = useSocket();
+  const socket = useSocketConnection();
 
   // Load report templates
   const loadTemplates = useCallback(async (filters?: Partial<ReportFilter>[]) => {

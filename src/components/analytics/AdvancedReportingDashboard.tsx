@@ -50,8 +50,8 @@ const AdvancedReportingDashboard: React.FC<AdvancedReportingDashboardProps> = ({
 
     // Sort templates
     filtered.sort((a, b) => {
-      const aValue = a[sortBy as keyof typeof a];
-      const bValue = b[sortBy as keyof typeof b];
+      const aValue = a[sortBy as keyof typeof a] ?? '';
+      const bValue = b[sortBy as keyof typeof b] ?? '';
       
       if (sortOrder === 'asc') {
         return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;

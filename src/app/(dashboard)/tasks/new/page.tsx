@@ -68,7 +68,8 @@ export default function NewTaskPage() {
         priority,
         due_date: dueDateISO,
         email_reminders: emailReminders,
-        ...(projectId != null ? { project_id: projectId } : {})
+        ...(projectId != null ? { project_id: projectId } : {}),
+        ...(currentWsId != null ? { workspace_id: parseInt(currentWsId, 10) } : {})
       };
 
       // Clean payload: convert undefined to null for all fields
@@ -76,11 +77,7 @@ export default function NewTaskPage() {
         Object.entries(rawBody).map(([k, v]) => [k, v === undefined ? null : v])
       );
 
-      await api.post(
-        "/tasks",
-        body,
-        currentWsId != null ? { params: { ws: currentWsId } } : undefined
-      );
+      await api.post("/tasks", body);
 
       const successMessage = dueDate 
         ? `Task created with deadline: ${new Date(dueDateISO!).toLocaleDateString()}`

@@ -26,6 +26,9 @@ export interface ResourceAllocation {
   hourlyRate?: number;
   estimatedHours: number;
   actualHours: number;
+  hoursPerWeek: number; // expected hours per week
+  projectName: string; // project name for display
+  role: string; // role on this project
   notes?: string;
   createdAt: string;
   updatedAt: string;
@@ -65,6 +68,24 @@ export interface ResourceConflict {
   resolvedAt?: string;
 }
 
+export interface UtilizationMetrics {
+  userId: string;
+  userName: string;
+  utilization: number;
+  efficiency: number;
+  workload: number;
+}
+
+export interface ResourceConflict {
+  id: string;
+  type: 'overallocation' | 'skill-gap' | 'timeline-conflict' | 'priority-conflict';
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  description: string;
+  affectedUsers: string[];
+  affectedProjects: string[];
+  suggestedActions: string[];
+}
+
 export interface ResourceForecast {
   period: 'week' | 'month' | 'quarter';
   startDate: string;
@@ -100,16 +121,20 @@ export interface ResourceManagementHook {
   // Team members and allocations
   teamMembers: TeamMember[];
   resourceAllocations: ResourceAllocation[];
+  allocations: ResourceAllocation[]; // alias for resourceAllocations
+  utilizationMetrics: UtilizationMetrics[];
   isLoading: boolean;
   error: string | null;
   
   // Resource allocation operations
   allocateResource: (allocation: Omit<ResourceAllocation, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  createAllocation: (allocation: Omit<ResourceAllocation, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateAllocation: (allocationId: string, updates: Partial<ResourceAllocation>) => Promise<void>;
+  deleteAllocation: (allocationId: string) => Promise<void>;
   removeAllocation: (allocationId: string) => Promise<void>;
   bulkAllocate: (allocations: Omit<ResourceAllocation, 'id' | 'createdAt' | 'updatedAt'>[]) => Promise<void>;
-  
-  // Team member management
+  bulkUpdateAllocations: (updates: Array<{id: string, updates: Partial<ResourceAllocation>}>) => Promise<void>;
+    getCapacityForecast: (startDate: string, endDate: string) => Promise<ResourceForecast>;  // Team member management
   addTeamMember: (member: Omit<TeamMember, 'id' | 'workload' | 'availability' | 'performance'>) => Promise<void>;
   updateTeamMember: (memberId: string, updates: Partial<TeamMember>) => Promise<void>;
   removeTeamMember: (memberId: string) => Promise<void>;
@@ -286,6 +311,9 @@ export function useResourceAllocation(workspaceId: string): ResourceManagementHo
             hourlyRate: 75,
             estimatedHours: 320,
             actualHours: 125,
+            hoursPerWeek: 32,
+            projectName: 'E-commerce Platform',
+            role: 'Lead Developer',
             notes: 'Lead developer for frontend and API development',
             createdAt: '2025-08-10T10:00:00Z',
             updatedAt: '2025-08-26T14:30:00Z'
@@ -315,6 +343,9 @@ export function useResourceAllocation(workspaceId: string): ResourceManagementHo
             hourlyRate: 65,
             estimatedHours: 160,
             actualHours: 95,
+            hoursPerWeek: 24,
+            projectName: 'E-commerce Platform',
+            role: 'UX Designer',
             notes: 'Responsible for user experience design and prototyping',
             createdAt: '2025-07-25T09:00:00Z',
             updatedAt: '2025-08-25T11:15:00Z'
@@ -344,6 +375,9 @@ export function useResourceAllocation(workspaceId: string): ResourceManagementHo
             hourlyRate: 85,
             estimatedHours: 240,
             actualHours: 85,
+            hoursPerWeek: 20,
+            projectName: 'E-commerce Platform',
+            role: 'Project Manager',
             notes: 'Project oversight and stakeholder management',
             createdAt: '2025-07-20T08:00:00Z',
             updatedAt: '2025-08-24T16:45:00Z'
@@ -751,13 +785,25 @@ export function useResourceAllocation(workspaceId: string): ResourceManagementHo
   return {
     teamMembers,
     resourceAllocations,
+    allocations: resourceAllocations, // alias
+    utilizationMetrics: [], // TODO: implement calculation
     conflicts,
     isLoading,
     error,
     allocateResource,
+    createAllocation: allocateResource, // alias
     updateAllocation,
+    deleteAllocation: removeAllocation, // alias
     removeAllocation,
     bulkAllocate,
+    bulkUpdateAllocations: async (updates) => {
+      for (const { id, updates: updateData } of updates) {
+        await updateAllocation(id, updateData);
+      }
+    },
+    getCapacityForecast: async (startDate: string, endDate: string) => {
+      return await generateForecast('month', startDate);
+    },
     addTeamMember,
     updateTeamMember,
     removeTeamMember,

@@ -42,7 +42,7 @@ export function MilestoneManagement({ projectId, className = '' }: MilestoneMana
     getCriticalPath,
     generateMilestoneReport,
     createFromTemplate
-  } = useMilestoneManagement();
+  } = useMilestoneManagement('default-workspace');
 
   const [selectedMilestone, setSelectedMilestone] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -61,6 +61,18 @@ export function MilestoneManagement({ projectId, className = '' }: MilestoneMana
 
   const projectProgress = getProjectProgress(projectId);
   const criticalPath = getCriticalPath(projectId);
+
+  const handleAddDeliverable = (deliverable: Omit<Deliverable, 'id'>) => {
+    return addDeliverable(selectedMilestone || '', deliverable);
+  };
+
+  const handleUpdateDeliverable = (id: string, updates: Partial<Deliverable>) => {
+    return updateDeliverable(selectedMilestone || '', id, updates);
+  };
+
+  const handleRemoveDeliverable = (id: string) => {
+    return removeDeliverable(selectedMilestone || '', id);
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -161,7 +173,7 @@ export function MilestoneManagement({ projectId, className = '' }: MilestoneMana
               <Clock size={20} />
             </div>
             <div className="stat-content">
-              <span className="stat-value">{projectMilestones.filter(m => m.status === 'pending').length}</span>
+              <span className="stat-value">{projectMilestones.filter(m => m.status === 'upcoming').length}</span>
               <span className="stat-label">Pending</span>
             </div>
           </div>
@@ -229,6 +241,7 @@ export function MilestoneManagement({ projectId, className = '' }: MilestoneMana
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value as any)}
                 className="filter-select"
+                aria-label="Filter milestones by status"
               >
                 <option value="all">All Status</option>
                 <option value="pending">Pending</option>
@@ -292,9 +305,9 @@ export function MilestoneManagement({ projectId, className = '' }: MilestoneMana
           deliverables={deliverables.filter(d => d.milestoneId === selectedMilestone)}
           onClose={() => setSelectedMilestone(null)}
           onUpdate={updateMilestone}
-          onAddDeliverable={addDeliverable}
-          onUpdateDeliverable={updateDeliverable}
-          onRemoveDeliverable={removeDeliverable}
+          onAddDeliverable={handleAddDeliverable}
+          onUpdateDeliverable={handleUpdateDeliverable}
+          onRemoveDeliverable={handleRemoveDeliverable}
         />
       )}
 
@@ -371,7 +384,7 @@ function MilestoneTimeline({
             <div className="timeline-content">
               <div className="milestone-card">
                 <div className="milestone-header">
-                  <h3 className="milestone-name">{milestone.title}</h3>
+                  <h3 className="milestone-name">{milestone.name}</h3>
                   <div className="milestone-badges">
                     {criticalPath.includes(milestone.id) && (
                       <span className="critical-badge">Critical</span>
@@ -391,7 +404,7 @@ function MilestoneTimeline({
                   </div>
                   <div className="meta-item">
                     <Users size={14} />
-                    <span>{milestone.assignedTo.length} assignees</span>
+                    <span>{milestone.assignedTo?.length || 0} assignees</span>
                   </div>
                   <div className="meta-item">
                     <FileText size={14} />
@@ -480,7 +493,7 @@ function MilestoneKanban({ milestones, onMilestoneSelect, onMilestoneUpdate, onM
                   onClick={() => onMilestoneSelect(milestone.id)}
                 >
                   <div className="card-header">
-                    <h4>{milestone.title}</h4>
+                    <h4>{milestone.name}</h4>
                     <div className="card-actions">
                       <button 
                         className="action-btn"
@@ -505,7 +518,7 @@ function MilestoneKanban({ milestones, onMilestoneSelect, onMilestoneUpdate, onM
                     </div>
                     <div className="meta-item">
                       <Users size={12} />
-                      <span>{milestone.assignedTo.length}</span>
+                      <span>{milestone.assignedTo?.length || 0}</span>
                     </div>
                   </div>
                   
@@ -566,7 +579,7 @@ function MilestoneList({ milestones, onMilestoneSelect, onMilestoneUpdate, onMil
             onClick={() => onMilestoneSelect(milestone.id)}
           >
             <div className="list-cell milestone-info">
-              <div className="milestone-title">{milestone.title}</div>
+              <div className="milestone-title">{milestone.name}</div>
               <div className="milestone-desc">{milestone.description}</div>
             </div>
             
@@ -599,13 +612,13 @@ function MilestoneList({ milestones, onMilestoneSelect, onMilestoneUpdate, onMil
             
             <div className="list-cell">
               <div className="assignee-avatars">
-                {milestone.assignedTo.slice(0, 3).map((userId, index) => (
+                {milestone.assignedTo?.slice(0, 3).map((userId, index) => (
                   <div key={userId} className="assignee-avatar">
                     <Users size={16} />
                   </div>
                 ))}
-                {milestone.assignedTo.length > 3 && (
-                  <span className="assignee-count">+{milestone.assignedTo.length - 3}</span>
+                {(milestone.assignedTo?.length || 0) > 3 && (
+                  <span className="assignee-count">+{(milestone.assignedTo?.length || 0) - 3}</span>
                 )}
               </div>
             </div>
@@ -676,7 +689,7 @@ function MilestoneDetailSidebar({
   return (
     <div className="milestone-sidebar">
       <div className="sidebar-header">
-        <h2>{milestone.title}</h2>
+        <h2>{milestone.name}</h2>
         <button className="close-btn" onClick={onClose} aria-label="Close sidebar">
           ×
         </button>
@@ -734,7 +747,7 @@ function MilestoneDetailSidebar({
                 <div key={deliverable.id} className="deliverable-item">
                   <div className="deliverable-header">
                     <div className="deliverable-info">
-                      <h4>{deliverable.title}</h4>
+                      <h4>{deliverable.name}</h4>
                       <span className={`deliverable-status ${deliverable.status}`}>
                         {deliverable.status}
                       </span>
@@ -803,11 +816,13 @@ interface CreateMilestoneModalProps {
 
 function CreateMilestoneModal({ projectId, onClose, onSubmit }: CreateMilestoneModalProps) {
   const [formData, setFormData] = useState({
-    title: '',
+    name: '',
     description: '',
     dueDate: '',
     priority: 'medium' as 'low' | 'medium' | 'high',
-    assignedTo: [] as string[]
+    assignedTo: [] as string[],
+    color: '#3b82f6',
+    tags: [] as string[]
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -816,7 +831,7 @@ function CreateMilestoneModal({ projectId, onClose, onSubmit }: CreateMilestoneM
     await onSubmit({
       ...formData,
       projectId,
-      status: 'pending',
+      status: 'upcoming',
       progress: 0,
       dependencies: [],
       deliverables: [],
@@ -850,8 +865,8 @@ function CreateMilestoneModal({ projectId, onClose, onSubmit }: CreateMilestoneM
               id="title"
               aria-label="Milestone title"
               type="text"
-              value={formData.title}
-              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               placeholder="Milestone title"
               required
             />
@@ -990,10 +1005,10 @@ interface AddDeliverableModalProps {
 
 function AddDeliverableModal({ milestoneId, onClose, onSubmit }: AddDeliverableModalProps) {
   const [formData, setFormData] = useState({
-    title: '',
+    name: '',
     description: '',
-    type: 'document' as 'document' | 'code' | 'design' | 'review' | 'other',
-    status: 'pending' as 'pending' | 'in-progress' | 'completed'
+    type: 'document' as 'document' | 'feature' | 'design' | 'report' | 'other',
+    status: 'pending' as 'pending' | 'in-progress' | 'review' | 'completed'
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1002,9 +1017,7 @@ function AddDeliverableModal({ milestoneId, onClose, onSubmit }: AddDeliverableM
     await onSubmit({
       ...formData,
       milestoneId,
-      files: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      files: []
     });
 
     onClose();
@@ -1026,8 +1039,8 @@ function AddDeliverableModal({ milestoneId, onClose, onSubmit }: AddDeliverableM
             <input
               id="title"
               type="text"
-              value={formData.title}
-              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               placeholder="Deliverable title"
               required
             />

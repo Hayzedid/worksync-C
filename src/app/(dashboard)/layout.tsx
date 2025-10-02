@@ -6,6 +6,17 @@ import { usePathname } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 import { useAuth } from "../../hooks/useAuth";
 import { useGlobalPresence } from "../../hooks/collaboration/useGlobalPresence";
+import { initializeSocket, getSocket } from "../../socket";
+
+interface Notification {
+  id: number;
+  title: string;
+  message: string;
+  created_at: string;
+  is_read: boolean;
+  type: string;
+  data?: any;
+}
 import { GlobalPresenceIndicator } from "../../components/collaboration";
 import { api } from "../../api";
 import ConfirmDialog from "../../components/ConfirmDialog";
@@ -52,7 +63,23 @@ export default function DashboardLayout({
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const pathname = usePathname();
+
+  // Fetch notifications function
+  const fetchNotifications = async () => {
+    try {
+      const response = await api.get('/notifications');
+      const notificationData = response.data.notifications || [];
+      setNotifications(notificationData);
+      setUnreadCount(notificationData.filter((n: Notification) => !n.is_read).length);
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error);
+      setNotifications([]);
+      setUnreadCount(0);
+    }
+  };
 
   // Get current page for presence
   const currentPage = pathname?.split('/').filter(Boolean)[0] || 'dashboard';
@@ -67,6 +94,23 @@ export default function DashboardLayout({
   // Get users on current page for display
   const pageUsers = getUsersOnPage(currentPage);
   // Workspace selection moved to dedicated page
+
+  // Fetch notifications on component mount
+  useEffect(() => {
+    fetchNotifications();
+    
+    // Set up WebSocket listener for new notifications
+    const socketInstance = initializeSocket();
+    if (socketInstance) {
+      socketInstance.on('notification', (data: any) => {
+        fetchNotifications();
+      });
+
+      return () => {
+        socketInstance.off('notification');
+      };
+    }
+  }, []);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -242,9 +286,11 @@ export default function DashboardLayout({
                   >
                     <Bell className="h-5 w-5" />
                     {/* Notification badge */}
-                    <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                      3
-                    </span>
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                        {unreadCount}
+                      </span>
+                    )}
                   </button>
                   
                   {/* Notifications Dropdown */}
@@ -254,26 +300,30 @@ export default function DashboardLayout({
                         <h3 className="text-lg font-medium text-gray-900">Notifications</h3>
                       </div>
                       <div className="max-h-96 overflow-y-auto">
-                        <div className="p-3 border-b hover:bg-gray-50 cursor-pointer">
-                          <p className="text-sm font-medium text-gray-900">New task assigned</p>
-                          <p className="text-xs text-gray-500 mt-1">You have been assigned to "Update Dashboard UI"</p>
-                          <p className="text-xs text-blue-600 mt-1">2 minutes ago</p>
-                        </div>
-                        <div className="p-3 border-b hover:bg-gray-50 cursor-pointer">
-                          <p className="text-sm font-medium text-gray-900">Project updated</p>
-                          <p className="text-xs text-gray-500 mt-1">WorkSync project status changed to "In Progress"</p>
-                          <p className="text-xs text-blue-600 mt-1">1 hour ago</p>
-                        </div>
-                        <div className="p-3 hover:bg-gray-50 cursor-pointer">
-                          <p className="text-sm font-medium text-gray-900">Deadline reminder</p>
-                          <p className="text-xs text-gray-500 mt-1">Task "Fix login issues" is due tomorrow</p>
-                          <p className="text-xs text-blue-600 mt-1">3 hours ago</p>
-                        </div>
+                        {notifications.length > 0 ? (
+                          notifications.map((notification) => (
+                            <div key={notification.id} className="p-3 border-b hover:bg-gray-50 cursor-pointer">
+                              <p className="text-sm font-medium text-gray-900">{notification.title}</p>
+                              <p className="text-xs text-gray-500 mt-1">{notification.message}</p>
+                              <p className="text-xs text-blue-600 mt-1">
+                                {new Date(notification.created_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="p-4 text-center text-gray-500">
+                            No notifications
+                          </div>
+                        )}
                       </div>
                       <div className="p-3 border-t border-gray-200">
-                        <button className="w-full text-center text-sm text-blue-600 hover:text-blue-800">
+                        <Link
+                          href="/notifications"
+                          className="block w-full text-center text-sm text-blue-600 hover:text-blue-800"
+                          onClick={() => setShowNotifications(false)}
+                        >
                           View all notifications
-                        </button>
+                        </Link>
                       </div>
                     </div>
                   )}

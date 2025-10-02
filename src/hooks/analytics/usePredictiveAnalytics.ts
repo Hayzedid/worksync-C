@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useSocket } from '../useSocket';
+import { useSocketConnection } from '../useSocket';
 
 // Predictive Analytics Interfaces
 export interface PredictiveModel {
@@ -620,7 +620,7 @@ export const usePredictiveAnalytics = (workspaceId?: string) => {
     sortOrder: 'desc',
   });
 
-  const socket = useSocket();
+  const socket = useSocketConnection();
 
   // Load models
   const loadModels = useCallback(async () => {
