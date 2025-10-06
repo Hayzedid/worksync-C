@@ -65,13 +65,17 @@ export default function DashboardLayout({
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const pathname = usePathname();
 
   // Fetch notifications function
   const fetchNotifications = async () => {
     try {
       const response = await api.get('/notifications');
-      const notificationData = response.data.notifications || [];
+      const notificationData = (response as any)?.notifications || [];
       setNotifications(notificationData);
       setUnreadCount(notificationData.filter((n: Notification) => !n.is_read).length);
     } catch (error) {
@@ -95,6 +99,73 @@ export default function DashboardLayout({
   const pageUsers = getUsersOnPage(currentPage);
   // Workspace selection moved to dedicated page
 
+  // Search functionality
+  const performSearch = async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const searchPromises = [
+        api.get(`/projects/search?q=${encodeURIComponent(query)}`).catch(() => ({ projects: [] })),
+        api.get(`/tasks/search?q=${encodeURIComponent(query)}`).catch(() => ({ tasks: [] })),
+        api.get(`/notes/search?q=${encodeURIComponent(query)}`).catch(() => ({ notes: [] })),
+        api.get(`/events/search?q=${encodeURIComponent(query)}`).catch(() => ({ events: [] }))
+      ];
+
+      const [projectsRes, tasksRes, notesRes, eventsRes] = await Promise.all(searchPromises);
+      
+      const results = [
+        ...(projectsRes.projects || []).map((item: any) => ({ ...item, type: 'project' })),
+        ...(tasksRes.tasks || []).map((item: any) => ({ ...item, type: 'task' })),
+        ...(notesRes.notes || []).map((item: any) => ({ ...item, type: 'note' })),
+        ...(eventsRes.events || []).map((item: any) => ({ ...item, type: 'event' }))
+      ];
+
+      setSearchResults(results);
+      setShowSearchResults(true);
+    } catch (error) {
+      console.error('Search failed:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery) {
+        performSearch(searchQuery);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const handleSearchItemClick = (item: any) => {
+    setShowSearchResults(false);
+    setSearchQuery('');
+    
+    switch (item.type) {
+      case 'project':
+        router.push(`/projects/${item.id}`);
+        break;
+      case 'task':
+        router.push(`/tasks/${item.id}`);
+        break;
+      case 'note':
+        router.push(`/notes/${item.id}`);
+        break;
+      case 'event':
+        router.push(`/events/${item.id}`);
+        break;
+    }
+  };
+
   // Fetch notifications on component mount
   useEffect(() => {
     fetchNotifications();
@@ -115,18 +186,23 @@ export default function DashboardLayout({
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      
       if (showNotifications || showProfileMenu) {
-        const target = event.target as HTMLElement;
         if (!target.closest('.notifications-dropdown') && !target.closest('.profile-dropdown')) {
           setShowNotifications(false);
           setShowProfileMenu(false);
         }
       }
+      
+      if (showSearchResults && !target.closest('.relative')) {
+        setShowSearchResults(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showNotifications, showProfileMenu]);
+  }, [showNotifications, showProfileMenu, showSearchResults]);
 
   // Redirect unauthenticated users (side-effect, not during render)
   // If there is a token but no user yet, attempt a single refresh instead of redirecting.
@@ -256,9 +332,49 @@ export default function DashboardLayout({
                 <input
                   aria-label="Search"
                   type="search"
-                  placeholder="Search..."
+                  placeholder="Search projects, tasks, notes..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => searchQuery && setShowSearchResults(true)}
                   className="block h-full w-full border-0 py-0 pl-8 pr-0 text-[#015958] placeholder:text-[#0CABA8] focus:ring-0 focus:border-[#0CABA8] focus:outline-none focus:border-2 rounded-full sm:text-sm bg-transparent"
                 />
+                
+                {/* Search Results Dropdown */}
+                {showSearchResults && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-[#0CABA8]/20 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
+                    {isSearching ? (
+                      <div className="p-4 text-center text-[#0CABA8]">
+                        <div className="animate-spin rounded-full h-6 w-6 border-2 border-[#0FC2C0] border-t-transparent mx-auto mb-2"></div>
+                        Searching...
+                      </div>
+                    ) : searchResults.length > 0 ? (
+                      <div className="py-2">
+                        {searchResults.map((item, index) => (
+                          <button
+                            key={`${item.type}-${item.id}-${index}`}
+                            onClick={() => handleSearchItemClick(item)}
+                            className="w-full px-4 py-3 text-left hover:bg-[#F6FFFE] flex items-center gap-3 border-b border-[#0CABA8]/10 last:border-0"
+                          >
+                            <div className={`w-2 h-2 rounded-full ${
+                              item.type === 'project' ? 'bg-blue-500' :
+                              item.type === 'task' ? 'bg-green-500' :
+                              item.type === 'note' ? 'bg-yellow-500' :
+                              'bg-purple-500'
+                            }`}></div>
+                            <div className="flex-1">
+                              <div className="font-medium text-[#015958]">{item.name || item.title}</div>
+                              <div className="text-sm text-[#0CABA8] capitalize">{item.type}</div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    ) : searchQuery ? (
+                      <div className="p-4 text-center text-[#0CABA8]">
+                        No results found for "{searchQuery}"
+                      </div>
+                    ) : null}
+                  </div>
+                )}
               </div>
             </div>
 

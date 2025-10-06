@@ -158,7 +158,8 @@ export default function TasksPage() {
   })();
   
   const [currentWsId, setCurrentWsId] = useState<number | null>(() => {
-    if (typeof window !== "undefined") {
+    // Only use stored workspace ID if there's a ws parameter in URL
+    if (typeof window !== "undefined" && wsParam) {
       const stored = sessionStorage.getItem("current_workspace_id");
       if (stored) {
         const n = parseInt(stored, 10);
@@ -172,10 +173,14 @@ export default function TasksPage() {
     if (wsIdFromUrl != null) {
       setCurrentWsId(wsIdFromUrl);
       if (typeof window !== "undefined") sessionStorage.setItem("current_workspace_id", String(wsIdFromUrl));
+    } else {
+      // Clear current workspace when navigating to general tasks page
+      setCurrentWsId(null);
     }
   }, [wsIdFromUrl]);
   
-  const effectiveWsId = wsIdFromUrl ?? currentWsId;
+  // Only use workspace filter if explicitly specified in URL
+  const effectiveWsId = wsIdFromUrl;
   
   const { data, isLoading, isError, error } = useQuery<unknown>({
     queryKey: ["tasks", { workspace_id: effectiveWsId }],

@@ -39,7 +39,8 @@ export default function NotesPage() {
   })();
 
   const [currentWsId, setCurrentWsId] = useState<number | null>(() => {
-    if (typeof window !== "undefined") {
+    // Only use stored workspace ID if there's a ws parameter in URL
+    if (typeof window !== "undefined" && wsParam) {
       const stored = sessionStorage.getItem("current_workspace_id");
       if (stored) {
         const n = parseInt(stored, 10);
@@ -53,10 +54,14 @@ export default function NotesPage() {
     if (wsIdFromUrl != null) {
       setCurrentWsId(wsIdFromUrl);
       if (typeof window !== "undefined") sessionStorage.setItem("current_workspace_id", String(wsIdFromUrl));
+    } else {
+      // Clear current workspace when navigating to general notes page
+      setCurrentWsId(null);
     }
   }, [wsIdFromUrl]);
 
-  const effectiveWsId = wsIdFromUrl ?? currentWsId;
+  // Only use workspace filter if explicitly specified in URL
+  const effectiveWsId = wsIdFromUrl;
 
   // presence and comment expansion for notes (match tasks page behavior)
   const [expandedComments, setExpandedComments] = useState<Set<number>>(new Set());
@@ -68,17 +73,7 @@ export default function NotesPage() {
     'notes'
   );
 
-  // Keep URL in sync with effective workspace id
-  useEffect(() => {
-    if (effectiveWsId == null) return;
-    const current = searchParams.get("ws");
-    const currentNum = current ? parseInt(current, 10) : null;
-    if (!(typeof currentNum === 'number' && Number.isFinite(currentNum)) || currentNum !== effectiveWsId) {
-      const usp = new URLSearchParams(searchParams.toString());
-      usp.set("ws", String(effectiveWsId));
-      router.replace(`?${usp.toString()}`);
-    }
-  }, [effectiveWsId, searchParams, router]);
+  // Note: We don't force URL sync to allow viewing general notes without workspace filter
 
   const { data, isLoading, isError, error } = useQuery<unknown>({
     queryKey: ["notes", { workspace_id: effectiveWsId }],
@@ -168,17 +163,7 @@ export default function NotesPage() {
     return acc;
   }, {});
 
-  // If no workspace is selected but notes were returned, try to infer and persist a workspace id
-  useEffect(() => {
-    if (effectiveWsId != null) return;
-    if (!Array.isArray(notes) || notes.length === 0) return;
-    // prefer any note that has a workspace id
-    const candidate = notes.map(n => toWsId(n)).find(id => id != null) ?? null;
-    if (candidate != null && typeof window !== 'undefined') {
-      setCurrentWsId(candidate);
-      sessionStorage.setItem('current_workspace_id', String(candidate));
-    }
-  }, [effectiveWsId, notes]);
+  // Note: We don't auto-infer workspace ID to allow viewing general notes across all workspaces
 
   function openDeleteConfirm(id: number, title?: string) {
     setTargetNote({ id, title });

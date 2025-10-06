@@ -35,14 +35,19 @@ export default function ProjectsPage() {
     if (wsIdFromUrl != null) {
       setCurrentWsId(wsIdFromUrl);
       if (typeof window !== "undefined") sessionStorage.setItem("current_workspace_id", String(wsIdFromUrl));
+    } else {
+      // Clear current workspace when navigating to general projects page
+      setCurrentWsId(null);
     }
   }, [wsIdFromUrl]);
-  const effectiveWsId = wsIdFromUrl ?? currentWsId;
+  
+  // Only use workspace filter if explicitly specified in URL
+  const effectiveWsId = wsIdFromUrl;
 
-  // Fetch all projects (server may include workspace association fields)
+  // Fetch projects (all projects when no workspace specified, workspace projects when specified)
   const { data, isLoading, isError } = useQuery<unknown>({
-    queryKey: ["projects"],
-    queryFn: () => api.get("/projects"),
+    queryKey: ["projects", { workspace_id: effectiveWsId }],
+    queryFn: () => api.get("/projects", { params: effectiveWsId != null ? { workspace_id: effectiveWsId } : undefined }),
   });
   const projects: unknown[] = Array.isArray(data)
     ? (data as unknown[])

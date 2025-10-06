@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Button } from '../../../components/Button';
 import { 
   User, 
@@ -33,9 +34,12 @@ const tabs = [
 export default function SettingsPage() {
   const { user } = useAuth();
   const { addToast } = useToast();
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState("Profile");
   const [deleteWorkspaceConfirm, setDeleteWorkspaceConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [currentWorkspace, setCurrentWorkspace] = useState<any>(null);
+  const [wsId, setWsId] = useState<number | null>(null);
   
   // Profile form state
   const [profileForm, setProfileForm] = useState({
@@ -44,11 +48,39 @@ export default function SettingsPage() {
     username: ""
   });
   
+  // Workspace form state
+  const [workspaceForm, setWorkspaceForm] = useState({
+    name: "",
+    description: ""
+  });
+  
   // Notification preferences
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [pushNotifications, setPushNotifications] = useState(false);
   const [weeklySummary, setWeeklySummary] = useState(true);
   const [theme, setTheme] = useState("Light");
+
+  // Get workspace ID from URL params or sessionStorage
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const fromUrl = searchParams?.get('ws');
+    if (fromUrl) {
+      const n = parseInt(fromUrl, 10);
+      if (Number.isFinite(n)) {
+        setWsId(n);
+        sessionStorage.setItem('current_workspace_id', String(n));
+        return;
+      }
+    }
+    const stored = sessionStorage.getItem('current_workspace_id');
+    if (stored) {
+      const n = parseInt(stored, 10);
+      if (Number.isFinite(n)) {
+        setWsId(n);
+        return;
+      }
+    }
+  }, [searchParams]);
 
   // Load current user data
   useEffect(() => {
@@ -62,6 +94,24 @@ export default function SettingsPage() {
       });
     }
   }, [user]);
+
+  // Load current workspace data
+  useEffect(() => {
+    const fetchWorkspace = async () => {
+      if (!wsId) return;
+      try {
+        const workspace = await api.get(`/workspaces/${wsId}`);
+        setCurrentWorkspace(workspace);
+        setWorkspaceForm({
+          name: workspace.name || "",
+          description: workspace.description || ""
+        });
+      } catch (error) {
+        console.error('Failed to fetch workspace:', error);
+      }
+    };
+    fetchWorkspace();
+  }, [wsId]);
 
   const handleDeleteWorkspace = async () => {
     // Workspace deletion logic
@@ -123,9 +173,21 @@ export default function SettingsPage() {
   };
 
   const handleSaveWorkspace = async () => {
+    if (!wsId) return;
     setLoading(true);
     try {
-      // TODO: Implement workspace settings API
+      await api.patch(`/workspaces/${wsId}`, {
+        name: workspaceForm.name,
+        description: workspaceForm.description
+      });
+      
+      // Update current workspace state
+      setCurrentWorkspace((prev: any) => ({
+        ...prev,
+        name: workspaceForm.name,
+        description: workspaceForm.description
+      }));
+      
       addToast({
         title: "Workspace Updated",
         description: "Workspace settings have been saved.",
@@ -134,7 +196,7 @@ export default function SettingsPage() {
     } catch (error: any) {
       addToast({
         title: "Update Failed",
-        description: "Failed to update workspace settings.",
+        description: error?.response?.data?.message || "Failed to update workspace settings.",
         variant: "error"
       });
     } finally {
@@ -396,9 +458,27 @@ export default function SettingsPage() {
                           type="text"
                           placeholder="Enter workspace name" 
                           className="w-full px-4 py-3 rounded-lg border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] focus:border-transparent text-[#015958] bg-[#F6FFFE] transition-all duration-200" 
-                          defaultValue="Acme Corp"
+                          value={workspaceForm.name}
+                          onChange={(e) => setWorkspaceForm(prev => ({ ...prev, name: e.target.value }))}
                         />
                       </div>
+                      <div>
+                        <label htmlFor="workspace-description" className="flex items-center gap-2 text-[#015958] font-semibold mb-2">
+                          <Globe className="h-4 w-4" />
+                          Description
+                        </label>
+                        <textarea 
+                          id="workspace-description" 
+                          placeholder="Describe your workspace" 
+                          className="w-full px-4 py-3 rounded-lg border border-[#0CABA8]/30 focus:outline-none focus:ring-2 focus:ring-[#0FC2C0] focus:border-transparent text-[#015958] bg-[#F6FFFE] transition-all duration-200" 
+                          rows={3}
+                          value={workspaceForm.description}
+                          onChange={(e) => setWorkspaceForm(prev => ({ ...prev, description: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <label htmlFor="workspace-theme" className="flex items-center gap-2 text-[#015958] font-semibold mb-2">
                           <Palette className="h-4 w-4" />

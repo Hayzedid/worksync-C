@@ -1,7 +1,7 @@
 import { io, Socket } from 'socket.io-client';
 
 // If NEXT_PUBLIC_SOCKET_URL is set, use it; otherwise default to same-origin by passing no URL to io()
-const envUrl = process.env.NEXT_PUBLIC_SOCKET_URL;
+const envUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4100';
 
 let socket: Socket | null = null;
 
@@ -15,6 +15,8 @@ export function initializeSocket(): Socket {
   const token = typeof window !== 'undefined' ? sessionStorage.getItem('access_token') : null;
 
   console.log('Initializing socket with token:', token ? 'present' : 'missing');
+  console.log('Socket URL from env:', process.env.NEXT_PUBLIC_SOCKET_URL);
+  console.log('Using socket URL:', envUrl);
 
   // Create new socket connection with auth token
   socket = envUrl && envUrl.trim().length > 0
