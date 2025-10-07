@@ -100,8 +100,12 @@ export function useRealTimeDashboard(workspaceId?: number) {
       // Process activities data
       let activitiesData = { recent: [] as any[] };
       if (activitiesRes.status === 'fulfilled') {
-        const activities = activitiesRes.value?.activities || activitiesRes.value || [];
+        console.log('Activities API response:', activitiesRes.value);
+        const activities = activitiesRes.value?.data?.activities || activitiesRes.value?.activities || activitiesRes.value || [];
+        console.log('Processed activities:', activities);
         activitiesData = { recent: activities.slice(0, 10) };
+      } else {
+        console.warn('Activities API failed:', activitiesRes);
       }
 
       // Calculate analytics

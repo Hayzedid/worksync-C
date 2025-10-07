@@ -20,12 +20,17 @@ export default function NotificationsPage() {
 
   const fetchNotifications = async () => {
     try {
-      const { data } = await api.get('/notifications');
-      if (data.success) {
-        setNotifications(data.notifications);
+      const response = await api.get('/notifications');
+      const data = response?.data;
+      if (data && data.success) {
+        setNotifications(data.notifications || []);
+      } else {
+        console.warn('Invalid notifications response:', data);
+        setNotifications([]);
       }
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
+      setNotifications([]);
     } finally {
       setLoading(false);
     }

@@ -482,8 +482,10 @@ export default function DashboardLayout({
                   {showProfileMenu && (
                     <div className="profile-dropdown absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
                       <div className="p-3 border-b border-gray-200">
-                        <p className="text-sm font-medium text-gray-900">{auth?.user?.firstName} {auth?.user?.lastName}</p>
-                        <p className="text-xs text-gray-500">{auth?.user?.email}</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          {auth?.user?.name || `${auth?.user?.firstName || 'User'} ${auth?.user?.lastName || ''}`.trim() || 'User'}
+                        </p>
+                        <p className="text-xs text-gray-500">{auth?.user?.email || 'No email'}</p>
                       </div>
                       <div className="py-1">
                         <Link

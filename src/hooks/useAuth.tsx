@@ -41,11 +41,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (data.success && data.user) {
         const userData = data.user;
-        // Add computed name field
-        userData.name = `${userData.firstName} ${userData.lastName}`;
-        // Ensure id is string type for consistency
-        userData.id = String(userData.id);
-        setUser(userData);
+        
+        // Ensure all required fields are present with fallbacks
+        const processedUser = {
+          id: String(userData.id || ''),
+          email: userData.email || '',
+          firstName: userData.firstName || userData.first_name || 'User',
+          lastName: userData.lastName || userData.last_name || '',
+          userName: userData.userName || userData.username || '',
+          name: userData.name || `${userData.firstName || userData.first_name || 'User'} ${userData.lastName || userData.last_name || ''}`.trim(),
+          avatar: userData.avatar || null
+        };
+        
+        setUser(processedUser);
       } else {
         setUser(null);
         if (typeof window !== 'undefined') {
@@ -81,12 +89,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           window.dispatchEvent(new CustomEvent('auth-change'));
         }
         
-        // Set user data
+        // Set user data with proper field handling
         const userData = data.user;
-        userData.name = `${userData.firstName} ${userData.lastName}`;
-        // Ensure id is string type for consistency
-        userData.id = String(userData.id);
-        setUser(userData);
+        const processedUser = {
+          id: String(userData.id || ''),
+          email: userData.email || '',
+          firstName: userData.firstName || userData.first_name || 'User',
+          lastName: userData.lastName || userData.last_name || '',
+          userName: userData.userName || userData.username || '',
+          name: userData.name || `${userData.firstName || userData.first_name || 'User'} ${userData.lastName || userData.last_name || ''}`.trim(),
+          avatar: userData.avatar || null
+        };
+        setUser(processedUser);
         
         return { success: true };
       } else {
@@ -131,12 +145,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           sessionStorage.setItem('access_token', data.token);
         }
         
-        // Set user data
+        // Set user data with proper field handling
         const userInfo = data.user;
-        userInfo.name = `${userInfo.firstName} ${userInfo.lastName}`;
-        // Ensure id is string type for consistency
-        userInfo.id = String(userInfo.id);
-        setUser(userInfo);
+        const processedUser = {
+          id: String(userInfo.id || ''),
+          email: userInfo.email || '',
+          firstName: userInfo.firstName || userInfo.first_name || 'User',
+          lastName: userInfo.lastName || userInfo.last_name || '',
+          userName: userInfo.userName || userInfo.username || '',
+          name: userInfo.name || `${userInfo.firstName || userInfo.first_name || 'User'} ${userInfo.lastName || userInfo.last_name || ''}`.trim(),
+          avatar: userInfo.avatar || null
+        };
+        setUser(processedUser);
         
         return { success: true };
       } else {
