@@ -2,7 +2,9 @@
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../../api";
-import { Plus, Trash2, MessageCircle, ChevronDown } from "lucide-react";
+import { Plus, Trash2, MessageCircle, ChevronDown, Upload } from "lucide-react";
+import { uploadFileToServer } from '../../../lib/upload';
+import AttachmentsPanel from "../../../components/files/AttachmentsPanel";
 import { useToast } from "../../../components/toast";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -141,6 +143,7 @@ export default function TasksPage() {
   const searchParams = useSearchParams();
   const wsParam = searchParams.get("ws");
   const [expandedComments, setExpandedComments] = useState<Set<number>>(new Set());
+  const [expandedAttachments, setExpandedAttachments] = useState<Set<number>>(new Set());
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [targetTask, setTargetTask] = useState<{ id: number; title?: string } | null>(null);
   
@@ -391,6 +394,52 @@ export default function TasksPage() {
                         >
                           <MessageCircle className="icon-comment" />
                         </button>
+                        <>
+                          <label htmlFor={`task-file-input-${t.id}`} className="sr-only">Attach file to task {t.id}</label>
+                          <input id={`task-file-input-${t.id}`} type="file" className="hidden" onChange={async e => {
+                            const f = e.target.files?.[0];
+                            if (!f) return;
+                            try {
+                              const data = await uploadFileToServer(`/api/tasks/${t.id}/upload`, f);
+                              addToast({ title: 'File uploaded', variant: 'success' });
+                              // refresh attachments if attachments panel is open
+                              if (expandedAttachments.has(t.id)) {
+                                qc.invalidateQueries({ queryKey: ["attachments", { type: 'task', id: t.id }] });
+                                qc.refetchQueries({ queryKey: ["attachments", { type: 'task', id: t.id }] });
+                              }
+                            } catch (err) {
+                              addToast({ title: 'Upload failed', description: (err as any)?.message || String(err), variant: 'error' });
+                            }
+                            // reset input
+                            if (e.target) e.target.value = '';
+                          }} />
+                          <button
+                            onClick={() => document.getElementById(`task-file-input-${t.id}`)?.click()}
+                            className="text-[#0FC2C0] hover:text-[#0CABA8]"
+                            title="Attach file"
+                            aria-label="Attach file"
+                            type="button"
+                          >
+                            <Upload className="icon-upload" />
+                          </button>
+                        </>
+                        <>
+                          <button
+                            onClick={() => {
+                              const newExpanded = new Set(expandedAttachments);
+                              if (newExpanded.has(t.id)) newExpanded.delete(t.id);
+                              else newExpanded.add(t.id);
+                              setExpandedAttachments(newExpanded);
+                            }}
+                            className="text-[#0FC2C0] hover:text-[#0CABA8]"
+                            title="Toggle attachments"
+                            aria-label="Toggle attachments"
+                          >
+                            <svg className="w-4 h-4 text-[#0FC2C0]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                              <path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95L10.12 18.12a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l7.07-7.07" />
+                            </svg>
+                          </button>
+                        </>
                         <button
                           onClick={() => openDeleteConfirm(t.id, t.title)}
                           className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded-md transition-all duration-200"
@@ -414,6 +463,13 @@ export default function TasksPage() {
                           users={presence.users}
                           className="max-h-60 overflow-y-auto"
                         />
+                      </div>
+                    )}
+
+                    {/* Expanded Attachments */}
+                    {expandedAttachments.has(t.id) && auth?.user && (
+                      <div className="mt-4 border-t border-[#0CABA8]/20 pt-4">
+                        <AttachmentsPanel itemType="task" itemId={String(t.id)} />
                       </div>
                     )}
                   </div>

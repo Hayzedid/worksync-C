@@ -184,3 +184,9 @@ main {
 .icon-delete:hover {
   transform: scale(1.1);
 }
+
+.icon-upload {
+  width: 18px !important;
+  height: 18px !important;
+  color: #0FC2C0;
+}

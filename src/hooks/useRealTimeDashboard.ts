@@ -100,10 +100,48 @@ export function useRealTimeDashboard(workspaceId?: number) {
       // Process activities data
       let activitiesData = { recent: [] as any[] };
       if (activitiesRes.status === 'fulfilled') {
-        console.log('Activities API response:', activitiesRes.value);
-        const activities = activitiesRes.value?.data?.activities || activitiesRes.value?.activities || activitiesRes.value || [];
-        console.log('Processed activities:', activities);
-        activitiesData = { recent: activities.slice(0, 10) };
+            // Normalize activity payloads so frontend components (ActivityFeed) receive
+            // a consistent shape regardless of backend snake_case/camelCase differences.
+            const rawActivities = activitiesRes.value?.data?.activities || activitiesRes.value?.activities || activitiesRes.value || [];
+
+            const normalizeActivity = (a: any) => {
+              const id = a?.id ?? a?.activity_id ?? a?._id ?? null;
+              const type = a?.type ?? a?.activity_type ?? (a?.commentable_type ? String(a.commentable_type).toLowerCase() : 'comment');
+
+              // Build user.name from various possible shapes
+              let userName = undefined;
+              if (a?.user && (a.user.name || a.user.firstName || a.user.first_name)) {
+                userName = a.user.name ?? `${a.user.firstName ?? a.user.first_name ?? ''}`.trim();
+                if (!userName && (a.user.lastName || a.user.last_name)) {
+                  userName = `${a.user.firstName ?? a.user.first_name ?? ''} ${a.user.lastName ?? a.user.last_name ?? ''}`.trim();
+                }
+              }
+              if (!userName && a?.author) {
+                userName = a.author.name ?? `${a.author.firstName ?? a.author.first_name ?? ''}`.trim();
+                if (!userName && (a.author.lastName || a.author.last_name)) {
+                  userName = `${a.author.firstName ?? a.author.first_name ?? ''} ${a.author.lastName ?? a.author.last_name ?? ''}`.trim();
+                }
+              }
+              if (!userName && (a?.firstName || a?.first_name || a?.lastName || a?.last_name)) {
+                userName = `${a?.firstName ?? a?.first_name ?? ''} ${a?.lastName ?? a?.last_name ?? ''}`.trim();
+              }
+              if (!userName && typeof a?.user === 'string') userName = a.user;
+              if (!userName) userName = 'Unknown';
+
+              const message = a?.message ?? a?.content ?? a?.body ?? a?.text ?? a?.note ?? '';
+              const createdAt = a?.createdAt ?? a?.created_at ?? a?.date ?? a?.timestamp ?? null;
+
+              return {
+                id,
+                type,
+                user: { name: userName },
+                message,
+                createdAt
+              };
+            };
+
+            const normalized = Array.isArray(rawActivities) ? rawActivities.map(normalizeActivity).filter((x: any) => x && x.id != null) : [];
+            activitiesData = { recent: normalized.slice(0, 10) };
       } else {
         console.warn('Activities API failed:', activitiesRes);
       }
@@ -321,6 +359,13 @@ function processTasksData(tasks: any[]) {
 
   const upcomingDeadlines = tasks
     .filter(task => task.due_date && new Date(task.due_date) >= now)
+    // Deduplicate by id in case backend returns duplicates (prefer earliest due date)
+    .reduce((acc: any[], task: any) => {
+      if (!task || task.id == null) return acc;
+      const exists = acc.find(t => String(t.id) === String(task.id));
+      if (!exists) acc.push(task);
+      return acc;
+    }, [])
     .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
     .slice(0, 5);
 

@@ -4,7 +4,9 @@ import React, { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../../api";
-import { Plus, Trash2, MessageCircle } from "lucide-react";
+import { Plus, Trash2, MessageCircle, Upload } from "lucide-react";
+import { uploadFileToServer } from '../../../lib/upload';
+import AttachmentsPanel from '../../../components/files/AttachmentsPanel';
 import { useToast } from "../../../components/toast";
 import { useAuth } from "../../../hooks/useAuth";
 import ConfirmDialog from "../../../components/ConfirmDialog";
@@ -65,6 +67,7 @@ export default function NotesPage() {
 
   // presence and comment expansion for notes (match tasks page behavior)
   const [expandedComments, setExpandedComments] = useState<Set<number>>(new Set());
+  const [expandedAttachments, setExpandedAttachments] = useState<Set<number>>(new Set());
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [targetNote, setTargetNote] = useState<{ id: number; title?: string } | null>(null);
   const { presence, setActivityStatus } = useGlobalPresence(
@@ -264,6 +267,51 @@ export default function NotesPage() {
                         >
                           <Trash2 className="icon-delete" />
                         </button>
+                        <>
+                          <label htmlFor={`note-file-input-${(n as any).id}`} className="sr-only">Attach file to note {(n as any).id}</label>
+                          <input id={`note-file-input-${(n as any).id}`} type="file" className="hidden" onChange={async e => {
+                            const f = e.target.files?.[0];
+                            if (!f) return;
+                            try {
+                              await uploadFileToServer(`/api/notes/${(n as any).id}/upload`, f);
+                              addToast({ title: 'File uploaded', variant: 'success' });
+                              // invalidate attachments for this note if panel is open
+                              if (expandedAttachments.has((n as any).id)) {
+                                qc.invalidateQueries({ queryKey: ['attachments', { type: 'note', id: (n as any).id }] });
+                                qc.refetchQueries({ queryKey: ['attachments', { type: 'note', id: (n as any).id }] });
+                              }
+                            } catch (err) {
+                              addToast({ title: 'Upload failed', description: (err as any)?.message || String(err), variant: 'error' });
+                            }
+                            if (e.target) e.target.value = '';
+                          }} />
+                          <button
+                            onClick={() => document.getElementById(`note-file-input-${(n as any).id}`)?.click()}
+                            className="text-[#0FC2C0] hover:text-[#0CABA8]"
+                            title="Attach file"
+                            aria-label="Attach file"
+                            type="button"
+                          >
+                            <Upload className="icon-upload" />
+                          </button>
+                        </>
+                        <>
+                          <button
+                            onClick={() => {
+                              const newExpanded = new Set(expandedAttachments);
+                              if (newExpanded.has((n as any).id)) newExpanded.delete((n as any).id);
+                              else newExpanded.add((n as any).id);
+                              setExpandedAttachments(newExpanded);
+                            }}
+                            className="text-[#0FC2C0] hover:text-[#0CABA8]"
+                            title="Toggle attachments"
+                            aria-label="Toggle attachments"
+                          >
+                            <svg className="w-4 h-4 text-[#0FC2C0]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                              <path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95L10.12 18.12a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l7.07-7.07" />
+                            </svg>
+                          </button>
+                        </>
                       </div>
                     </div>
                     {expandedComments.has((n as any).id) && auth?.user && (
@@ -276,6 +324,11 @@ export default function NotesPage() {
                           users={presence.users}
                           className="max-h-60 overflow-y-auto"
                         />
+                      </div>
+                    )}
+                    {expandedAttachments.has((n as any).id) && auth?.user && (
+                      <div className="mt-4 border-t border-[#0CABA8]/20 pt-4">
+                        <AttachmentsPanel itemType="note" itemId={String((n as any).id)} />
                       </div>
                     )}
                   </div>
