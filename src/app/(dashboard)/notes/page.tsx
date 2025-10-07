@@ -273,7 +273,7 @@ export default function NotesPage() {
                             const f = e.target.files?.[0];
                             if (!f) return;
                             try {
-                              await uploadFileToServer(`/api/notes/${(n as any).id}/upload`, f);
+                              await uploadFileToServer(`/attachments/notes/${(n as any).id}/upload`, f);
                               addToast({ title: 'File uploaded', variant: 'success' });
                               // invalidate attachments for this note if panel is open
                               if (expandedAttachments.has((n as any).id)) {

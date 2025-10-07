@@ -38,7 +38,7 @@ export default function WorkspacePage() {
   const projectsHref = wsId != null ? `/workspace/projects?ws=${wsId}` : "/workspace/projects";
   const newProjectHref = wsId != null ? `/projects/new?ws=${wsId}` : "/projects/new";
   const inviteHref = wsId != null ? `/workspace/invite?ws=${wsId}` : "/workspace/invite";
-  const settingsHref = wsId != null ? `/settings?ws=${wsId}` : "/settings";
+  const settingsHref = wsId != null ? `/workspace/settings?ws=${wsId}` : "/workspace/settings";
 
   // Fetch notifications/activity for the current workspace
   const { data: notifications } = useQuery<unknown[]>({
@@ -117,10 +117,11 @@ export default function WorkspacePage() {
         <Link
           href={settingsHref}
           aria-label="Workspace Settings"
-          className="ml-auto inline-flex items-center justify-center size-9 rounded-full border border-[#0CABA8]/40 text-[#015958] hover:bg-[#F6FFFE]"
+          className="ml-auto inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[#0CABA8]/40 text-[#015958] hover:bg-[#F6FFFE] hover:shadow-sm transition-all duration-200"
           title="Workspace Settings"
         >
           <Settings className="h-4 w-4" />
+          <span className="font-medium">Settings</span>
         </Link>
       </div>
       {/* Invite form moved to /workspace/invite */}

@@ -400,7 +400,7 @@ export default function TasksPage() {
                             const f = e.target.files?.[0];
                             if (!f) return;
                             try {
-                              const data = await uploadFileToServer(`/api/tasks/${t.id}/upload`, f);
+                              const data = await uploadFileToServer(`/attachments/tasks/${t.id}/upload`, f);
                               addToast({ title: 'File uploaded', variant: 'success' });
                               // refresh attachments if attachments panel is open
                               if (expandedAttachments.has(t.id)) {

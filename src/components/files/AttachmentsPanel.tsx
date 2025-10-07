@@ -11,7 +11,7 @@ type Props = {
 export default function AttachmentsPanel({ itemType, itemId }: Props) {
   const queryKey = ["attachments", { type: itemType, id: Number(itemId) }];
   const fetcher = async () => {
-    const path = itemType === 'task' ? `/attachments/task/${itemId}` : `/attachments/note/${itemId}`;
+    const path = itemType === 'task' ? `/attachments/tasks/${itemId}/attachments` : `/attachments/notes/${itemId}/attachments`;
     const res = await api.get(path);
     // backend returns { success: true, attachments: [...] }
     return (res as any)?.attachments ?? [];
@@ -26,7 +26,7 @@ export default function AttachmentsPanel({ itemType, itemId }: Props) {
         ? sessionStorage.getItem('access_token') || localStorage.getItem('access_token') 
         : null;
 
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api';
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4100/api';
       const response = await fetch(`${API_BASE_URL}/attachments/files/${fileId}`, {
         headers: {
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})

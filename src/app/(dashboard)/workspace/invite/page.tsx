@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "../../../../api";
-import { UserPlus } from "lucide-react";
+import { UserPlus, Settings } from "lucide-react";
 import { useToast } from "../../../../components/toast";
 
 export default function InviteMemberPage() {
@@ -59,7 +59,16 @@ export default function InviteMemberPage() {
       <div className="max-w-xl mx-auto bg-white rounded-xl shadow p-6 border border-[#0CABA8]/20">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-[#0FC2C0] flex items-center gap-2"><UserPlus className="h-5 w-5" /> Invite Member</h1>
-          <Link href={wsId != null ? `/workspace?ws=${wsId}` : "/workspace"} className="text-[#0CABA8] hover:underline">Back</Link>
+          <div className="flex items-center gap-3">
+            <Link 
+              href={wsId != null ? `/workspace/settings?ws=${wsId}` : "/workspace/settings"}
+              className="inline-flex items-center gap-2 px-3 py-1.5 border border-[#0CABA8]/40 text-[#015958] rounded hover:bg-[#F6FFFE] hover:shadow-sm transition-all duration-200 text-sm"
+              title="Workspace Settings"
+            >
+              <Settings className="h-4 w-4" /> Settings
+            </Link>
+            <Link href={wsId != null ? `/workspace?ws=${wsId}` : "/workspace"} className="text-[#0CABA8] hover:underline">Back</Link>
+          </div>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

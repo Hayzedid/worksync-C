@@ -12,8 +12,8 @@ export async function uploadFileToServer(path: string, file: File) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  // Use the same API base URL as api.ts - port 5000 for main server
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api';
+  // Use the same API base URL as api.ts - port 4100 for main server
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4100/api';
   const fullUrl = `${API_BASE_URL}${path}`;
 
   const resp = await fetch(fullUrl, {

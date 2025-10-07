@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Users, UserPlus, Loader2 } from "lucide-react";
+import { Users, UserPlus, Loader2, Settings } from "lucide-react";
 import { api } from "../../../../api";
 
 interface Member {
@@ -84,9 +84,18 @@ export default function WorkspaceMembersPage() {
               <Users className="h-5 w-5" /> Members ({members.length})
             </h1>
           </div>
-          <Link href={inviteHref} className="inline-flex items-center gap-2 px-4 py-2 bg-[#0FC2C0] text-white rounded hover:bg-[#0CABA8] transition-colors">
-            <UserPlus className="h-4 w-4" /> Invite Member
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link 
+              href={wsId != null ? `/workspace/settings?ws=${wsId}` : "/workspace/settings"}
+              className="inline-flex items-center gap-2 px-4 py-2 border border-[#0CABA8]/40 text-[#015958] rounded hover:bg-[#F6FFFE] hover:shadow-sm transition-all duration-200"
+              title="Workspace Settings"
+            >
+              <Settings className="h-4 w-4" /> Settings
+            </Link>
+            <Link href={inviteHref} className="inline-flex items-center gap-2 px-4 py-2 bg-[#0FC2C0] text-white rounded hover:bg-[#0CABA8] transition-colors">
+              <UserPlus className="h-4 w-4" /> Invite Member
+            </Link>
+          </div>
         </div>
 
         {error ? (

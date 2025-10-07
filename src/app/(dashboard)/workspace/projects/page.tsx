@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../../../api";
 import { normalizeStatus, statusToRank } from '../../../../lib/status';
-import { Folder, FolderPlus } from "lucide-react";
+import { Folder, FolderPlus, Settings } from "lucide-react";
 
 // Helpers to normalize incoming project shape
 function toWsId(p: unknown): number | null {
@@ -263,12 +263,23 @@ export default function WorkspaceProjectsPage() {
             <h1 className="text-3xl font-bold text-[#0FC2C0]">Projects</h1>
             <div className="text-sm text-[#0CABA8]">{headerLabel}</div>
           </div>
-          <Link
-            href={effectiveWsId != null ? `/projects/new?ws=${effectiveWsId}` : "/projects/new"}
-            className="flex items-center gap-2 px-4 py-2 bg-[#0FC2C0] text-white rounded hover:bg-[#0CABA8] transition-colors font-semibold"
-          >
-            <FolderPlus className="h-4 w-4" /> New Project
-          </Link>
+          <div className="flex items-center gap-3">
+            {effectiveWsId != null && (
+              <Link
+                href={`/workspace/settings?ws=${effectiveWsId}`}
+                className="flex items-center gap-2 px-4 py-2 border border-[#0CABA8]/40 text-[#015958] rounded hover:bg-[#F6FFFE] hover:shadow-sm transition-all duration-200 font-medium"
+                title="Workspace Settings"
+              >
+                <Settings className="h-4 w-4" /> Settings
+              </Link>
+            )}
+            <Link
+              href={effectiveWsId != null ? `/projects/new?ws=${effectiveWsId}` : "/projects/new"}
+              className="flex items-center gap-2 px-4 py-2 bg-[#0FC2C0] text-white rounded hover:bg-[#0CABA8] transition-colors font-semibold"
+            >
+              <FolderPlus className="h-4 w-4" /> New Project
+            </Link>
+          </div>
         </div>
 
         {effectiveWsId == null && (
@@ -363,8 +374,8 @@ export default function WorkspaceProjectsPage() {
         ) : null}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {sortedNonArchived.map((p) => (
-              <div key={p.id} className="bg-white rounded-xl shadow p-6 border border-[#0CABA8]/20 hover:shadow-md transition-shadow">
+            {sortedNonArchived.map((p, index) => (
+              <div key={p.id ?? `project-${index}`} className="bg-white rounded-xl shadow p-6 border border-[#0CABA8]/20 hover:shadow-md transition-shadow">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-4">
                     <Folder className="h-8 w-8 text-[#0FC2C0]" />
@@ -380,8 +391,8 @@ export default function WorkspaceProjectsPage() {
             ))}
 
             {/* Archived shown after non-archived */}
-            {sortedArchived.map((p) => (
-              <div key={`arch-${p.id}`} className="bg-white/60 rounded-xl p-6 border border-[#0CABA8]/10">
+            {sortedArchived.map((p, index) => (
+              <div key={p.id ? `arch-${p.id}` : `arch-project-${index}`} className="bg-white/60 rounded-xl p-6 border border-[#0CABA8]/10">
                 <div className="flex items-start gap-4">
                   <Folder className="h-8 w-8 text-gray-400" />
                   <div>
