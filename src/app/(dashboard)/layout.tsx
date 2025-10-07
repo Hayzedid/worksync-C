@@ -109,27 +109,48 @@ export default function DashboardLayout({
 
     setIsSearching(true);
     try {
-      const searchPromises = [
-        api.get(`/projects/search?q=${encodeURIComponent(query)}`).catch(() => ({ projects: [] })),
-        api.get(`/tasks/search?q=${encodeURIComponent(query)}`).catch(() => ({ tasks: [] })),
-        api.get(`/notes/search?q=${encodeURIComponent(query)}`).catch(() => ({ notes: [] })),
-        api.get(`/events/search?q=${encodeURIComponent(query)}`).catch(() => ({ events: [] }))
-      ];
-
-      const [projectsRes, tasksRes, notesRes, eventsRes] = await Promise.all(searchPromises);
+      // Use the new global search endpoint
+      const response = await api.get(`/search/global?q=${encodeURIComponent(query)}`);
       
-      const results = [
-        ...(projectsRes.projects || []).map((item: any) => ({ ...item, type: 'project' })),
-        ...(tasksRes.tasks || []).map((item: any) => ({ ...item, type: 'task' })),
-        ...(notesRes.notes || []).map((item: any) => ({ ...item, type: 'note' })),
-        ...(eventsRes.events || []).map((item: any) => ({ ...item, type: 'event' }))
-      ];
+      if (response.success && response.results) {
+        const results = [
+          ...(response.results.projects || []).map((item: any) => ({ ...item, type: 'project' })),
+          ...(response.results.tasks || []).map((item: any) => ({ ...item, type: 'task' })),
+          ...(response.results.notes || []).map((item: any) => ({ ...item, type: 'note' }))
+        ];
 
-      setSearchResults(results);
-      setShowSearchResults(true);
+        setSearchResults(results);
+        setShowSearchResults(true);
+      } else {
+        setSearchResults([]);
+        setShowSearchResults(false);
+      }
     } catch (error) {
       console.error('Search failed:', error);
       setSearchResults([]);
+      setShowSearchResults(false);
+      
+      // Fallback to individual endpoint searches if global search fails
+      try {
+        const searchPromises = [
+          api.get(`/projects/search?q=${encodeURIComponent(query)}`).catch(() => ({ projects: [] })),
+          api.get(`/tasks/search?q=${encodeURIComponent(query)}`).catch(() => ({ tasks: [] })),
+          api.get(`/notes/search?q=${encodeURIComponent(query)}`).catch(() => ({ notes: [] }))
+        ];
+
+        const [projectsRes, tasksRes, notesRes] = await Promise.all(searchPromises);
+        
+        const fallbackResults = [
+          ...(projectsRes.projects || []).map((item: any) => ({ ...item, type: 'project' })),
+          ...(tasksRes.tasks || []).map((item: any) => ({ ...item, type: 'task' })),
+          ...(notesRes.notes || []).map((item: any) => ({ ...item, type: 'note' }))
+        ];
+
+        setSearchResults(fallbackResults);
+        setShowSearchResults(true);
+      } catch (fallbackError) {
+        console.error('Fallback search also failed:', fallbackError);
+      }
     } finally {
       setIsSearching(false);
     }
