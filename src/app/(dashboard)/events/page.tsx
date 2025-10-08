@@ -73,7 +73,7 @@ export default function EventsPage() {
     <div className="min-h-screen p-4 md:p-8">
       <div className="max-w-6xl mx-auto rounded-xl p-2 md:p-4">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-3xl font-bold text-[#e6fffb]">Events</h1>
+          <h1 className="text-3xl font-bold text-[#076463]">Events</h1>
           <Link href="/events/new" className="px-4 py-2 bg-[#0FC2C0] text-white rounded hover:bg-[#0CABA8] transition-colors font-semibold">New Event</Link>
         </div>
         {isLoading && <div className="text-[#e6fffb] p-2">Loading events…</div>}
