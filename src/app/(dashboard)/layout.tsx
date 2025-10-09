@@ -14,7 +14,6 @@ interface Notification {
   message: string;
   created_at: string;
   is_read: boolean;
-  type: string;
   data?: any;
 }
 import { GlobalPresenceIndicator } from "../../components/collaboration";
@@ -22,21 +21,23 @@ import { api } from "../../api";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import { 
   LayoutDashboard, 
+  FolderPlus, 
   CheckSquare, 
   FileText, 
   Calendar, 
-  Settings, 
+  Users, 
   Bell, 
-  Search,
-  Menu,
-  X,
-  User,
-  LogOut,
-  ChevronLeft,
+  Search, 
+  User, 
+  Settings, 
+  LogOut, 
+  ChevronDown, 
+  X, 
+  Clock,
   ChevronRight,
-  FolderPlus,
+  ChevronLeft,
   BarChart2,
-  Users
+  Menu
 } from 'lucide-react';
 
 const navigation = [
@@ -44,6 +45,7 @@ const navigation = [
   { name: 'Projects', href: '/projects', icon: FolderPlus },
   { name: 'Tasks', href: '/tasks', icon: CheckSquare },
   { name: 'Notes', href: '/notes', icon: FileText },
+  { name: 'Time Tracking', href: '/time-tracking', icon: Clock },
   { name: 'Events', href: '/events', icon: Calendar },
   { name: 'Workspace', href: '/workspaces', icon: LayoutDashboard },
   { name: 'Collaboration', href: '/collaboration', icon: Users },
