@@ -46,7 +46,7 @@ export default function SettingsPage() {
           ? `${user.firstName} ${user.lastName}` 
           : user.name || "",
         email: user.email || "",
-        username: user.userName || ""
+        username: user.userName || user.username || ""
       });
     }
   }, [user]);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "../../../hooks/useAuth";
 import { RealTimeAnalytics } from "../../../components/dashboard/RealTimeAnalytics";
 import { useRealTimeDashboard } from "../../../hooks/useRealTimeDashboard";
@@ -8,11 +9,27 @@ import { Wifi, WifiOff, RotateCw, TrendingUp, BarChart3, Activity } from "lucide
 
 export default function AnalyticsPage() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
   const [currentWorkspaceId, setCurrentWorkspaceId] = useState<number | undefined>();
   const { data, loading, error, connectionStatus, refresh } = useRealTimeDashboard(currentWorkspaceId);
 
-  // Get workspace ID from sessionStorage
+  // Get workspace ID from URL params or sessionStorage
   useEffect(() => {
+    // First check URL parameters
+    const workspaceParam = searchParams.get('workspace');
+    if (workspaceParam) {
+      const wsId = parseInt(workspaceParam, 10);
+      if (Number.isFinite(wsId)) {
+        setCurrentWorkspaceId(wsId);
+        // Also update sessionStorage for consistency
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('current_workspace_id', String(wsId));
+        }
+        return;
+      }
+    }
+
+    // Fallback to sessionStorage
     if (typeof window !== 'undefined') {
       const stored = sessionStorage.getItem('current_workspace_id');
       if (stored) {
@@ -22,7 +39,7 @@ export default function AnalyticsPage() {
         }
       }
     }
-  }, []);
+  }, [searchParams]);
 
   if (loading) {
     return (

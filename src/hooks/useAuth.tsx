@@ -8,6 +8,7 @@ interface User {
   firstName: string;
   lastName: string;
   userName?: string;
+  username?: string; // Backend field name
   name?: string; // Computed field
   avatar?: string; // Added avatar property for time tracking and other features
 }
@@ -49,6 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           firstName: userData.firstName || userData.first_name || 'User',
           lastName: userData.lastName || userData.last_name || '',
           userName: userData.userName || userData.username || '',
+          username: userData.username || userData.userName || '',
           name: userData.name || `${userData.firstName || userData.first_name || 'User'} ${userData.lastName || userData.last_name || ''}`.trim(),
           avatar: userData.avatar || null
         };
@@ -97,6 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           firstName: userData.firstName || userData.first_name || 'User',
           lastName: userData.lastName || userData.last_name || '',
           userName: userData.userName || userData.username || '',
+          username: userData.username || userData.userName || '',
           name: userData.name || `${userData.firstName || userData.first_name || 'User'} ${userData.lastName || userData.last_name || ''}`.trim(),
           avatar: userData.avatar || null
         };
@@ -153,6 +156,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           firstName: userInfo.firstName || userInfo.first_name || 'User',
           lastName: userInfo.lastName || userInfo.last_name || '',
           userName: userInfo.userName || userInfo.username || '',
+          username: userInfo.username || userInfo.userName || '',
           name: userInfo.name || `${userInfo.firstName || userInfo.first_name || 'User'} ${userInfo.lastName || userInfo.last_name || ''}`.trim(),
           avatar: userInfo.avatar || null
         };

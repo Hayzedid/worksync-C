@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Settings, Folder, UserPlus, CheckSquare, FileText, Activity as ActivityIcon } from "lucide-react";
+import { Settings, Folder, UserPlus, CheckSquare, FileText, Activity as ActivityIcon, BarChart2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../../api";
 
@@ -39,6 +39,7 @@ export default function WorkspacePage() {
   const newProjectHref = wsId != null ? `/projects/new?ws=${wsId}` : "/projects/new";
   const inviteHref = wsId != null ? `/workspace/invite?ws=${wsId}` : "/workspace/invite";
   const settingsHref = wsId != null ? `/workspace/settings?ws=${wsId}` : "/workspace/settings";
+  const analyticsHref = wsId != null ? `/analytics?workspace=${wsId}` : "/analytics";
 
   // Fetch notifications/activity for the current workspace
   const { data: notifications } = useQuery<unknown[]>({
@@ -114,15 +115,25 @@ export default function WorkspacePage() {
             <UserPlus className="h-4 w-4" /> Add Members
           </Link>
         </div>
-        <Link
-          href={settingsHref}
-          aria-label="Workspace Settings"
-          className="ml-auto inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[#0CABA8]/40 text-[#015958] hover:bg-[#F6FFFE] hover:shadow-sm transition-all duration-200"
-          title="Workspace Settings"
-        >
-          <Settings className="h-4 w-4" />
-          <span className="font-medium">Settings</span>
-        </Link>
+        <div className="ml-auto flex items-center gap-3">
+          <Link
+            href={analyticsHref}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#0FC2C0] text-white hover:bg-[#0CABA8] transition-all duration-200"
+            title="View Workspace Analytics"
+          >
+            <BarChart2 className="h-4 w-4" />
+            <span className="font-medium">Analytics</span>
+          </Link>
+          <Link
+            href={settingsHref}
+            aria-label="Workspace Settings"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[#0CABA8]/40 text-[#015958] hover:bg-[#F6FFFE] hover:shadow-sm transition-all duration-200"
+            title="Workspace Settings"
+          >
+            <Settings className="h-4 w-4" />
+            <span className="font-medium">Settings</span>
+          </Link>
+        </div>
       </div>
       {/* Invite form moved to /workspace/invite */}
       {/* Removed large icon tiles to avoid duplication; top CTAs already provide icon actions */}
